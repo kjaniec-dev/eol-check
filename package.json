@@ -1,0 +1,23 @@
+{
+  "name": "eol-check",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "fetch-data": "node scripts/fetch-eol.ts",
+    "dev": "astro dev",
+    "build": "node scripts/fetch-eol.ts && astro build",
+    "preview": "astro preview",
+    "test": "vitest run",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "astro": "^7.4.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@types/node": "^22.20.5",
+    "typescript": "^5.6.0",
+    "vitest": "^5.0.5"
+  }
+}
