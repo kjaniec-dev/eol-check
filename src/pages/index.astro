@@ -1,5 +1,7 @@
 ---
 import data from '../data/eol.json';
+import Checker from '../components/Checker.tsx';
+import '../styles/global.css';
 
 const generated = data.generatedAt.slice(0, 10);
 ---
@@ -10,118 +12,24 @@ const generated = data.generatedAt.slice(0, 10);
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>EOL Check</title>
     <meta name="description" content="Paste package.json, pom.xml, go.mod or a Dockerfile and see which components are past end of support. Runs entirely in your browser." />
+    <script is:inline>
+      // Follow the OS colour scheme; the design package remaps tokens under .dark
+      if (matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.classList.add('dark');
+    </script>
   </head>
   <body>
-    <main>
-      <h1>EOL Check</h1>
-      <p class="lead">
-        Paste a <code>package.json</code>, <code>pom.xml</code>, <code>go.mod</code> or <code>Dockerfile</code>.
-        Parsing happens in your browser; nothing is uploaded.
-      </p>
-
-      <textarea id="input" rows="12" spellcheck="false" placeholder="Paste a manifest here…"></textarea>
-      <div class="row">
-        <label class="file">Or choose a file <input id="file" type="file" /></label>
-        <button id="copy" type="button" hidden>Copy as Markdown</button>
-      </div>
-
-      <section id="result" aria-live="polite" hidden>
-        <h2 id="summary"></h2>
-        <table>
-          <thead><tr><th>Status</th><th>Component</th><th>Version</th><th>Cycle</th><th>Support ends</th></tr></thead>
-          <tbody id="rows"></tbody>
-        </table>
-      </section>
-
-      <footer>Data: <a href="https://endoflife.date">endoflife.date</a>, snapshot from {generated}.</footer>
+    <main class="mx-auto max-w-5xl px-4 py-10 flex flex-col gap-6">
+      <header class="flex flex-col gap-2">
+        <h1 class="m-0 text-3xl font-bold tracking-tight">EOL Check</h1>
+        <p class="m-0 text-muted-foreground">
+          Paste or drop a <code>package.json</code>, <code>pom.xml</code>, <code>go.mod</code> or <code>Dockerfile</code>.
+          Everything is parsed in your browser; nothing is uploaded.
+        </p>
+      </header>
+      <Checker client:load />
+      <footer class="text-sm text-muted-foreground">
+        Data: <a class="underline" href="https://endoflife.date">endoflife.date</a>, snapshot from {generated}.
+      </footer>
     </main>
-
-    <script>
-      import data from '../data/eol.json';
-      import { check, sortFindings } from '../lib/match.ts';
-      import { parseAny } from '../lib/parsers/index.ts';
-      import type { Dataset, Finding } from '../lib/types.ts';
-
-      const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-      const input = $<HTMLTextAreaElement>('input');
-      const fileInput = $<HTMLInputElement>('file');
-      const copy = $<HTMLButtonElement>('copy');
-      const result = $('result');
-      const summary = $('summary');
-      const rows = $('rows');
-
-      const LABEL = { eol: 'End of life', soon: 'Ending soon', ok: 'Supported', unknown: 'Unknown' } as const;
-      let findings: Finding[] = [];
-
-      function render() {
-        const { type, components } = parseAny(input.value);
-        findings = sortFindings(check(components, data as Dataset));
-        result.hidden = input.value.trim() === '';
-        copy.hidden = findings.length === 0;
-
-        if (!type) {
-          summary.textContent = 'Could not recognise this file type.';
-          rows.replaceChildren();
-          return;
-        }
-        const eol = findings.filter((f) => f.status === 'eol').length;
-        const soon = findings.filter((f) => f.status === 'soon').length;
-        summary.textContent = findings.length === 0
-          ? `Nothing to check in this ${type}.`
-          : `${eol} past end of support, ${soon} ending within 6 months (of ${findings.length} components)`;
-
-        rows.replaceChildren(...findings.map((f) => {
-          const tr = document.createElement('tr');
-          tr.className = f.status;
-          const cells = [
-            LABEL[f.status] + (f.note ? ` – ${f.note}` : ''),
-            f.productLabel ?? f.component.label,
-            f.component.version ?? '',
-            f.cycle ?? '',
-            f.eolFrom ?? '',
-          ];
-          for (const text of cells) {
-            const td = document.createElement('td');
-            td.textContent = text;
-            tr.append(td);
-          }
-          return tr;
-        }));
-      }
-
-      function toMarkdown(): string {
-        const lines = ['| Status | Component | Version | Cycle | Support ends |', '|---|---|---|---|---|'];
-        for (const f of findings) {
-          lines.push(`| ${LABEL[f.status]} | ${f.productLabel ?? f.component.label} | ${f.component.version ?? ''} | ${f.cycle ?? ''} | ${f.eolFrom ?? ''} |`);
-        }
-        return lines.join('\n');
-      }
-
-      input.addEventListener('input', render);
-      fileInput.addEventListener('change', async () => {
-        const file = fileInput.files?.[0];
-        if (file) {
-          input.value = await file.text();
-          render();
-        }
-      });
-      copy.addEventListener('click', () => navigator.clipboard.writeText(toMarkdown()));
-    </script>
-
-    <style is:global>
-      :root { color-scheme: light dark; --eol: #c62828; --soon: #b26a00; --ok: #2e7d32; }
-      body { font: 16px/1.5 system-ui, sans-serif; margin: 0; }
-      main { max-width: 56rem; margin: 0 auto; padding: 2rem 1rem; }
-      .lead { opacity: .8; }
-      textarea { width: 100%; box-sizing: border-box; font: 14px/1.4 ui-monospace, monospace; padding: .75rem; }
-      .row { display: flex; gap: 1rem; align-items: center; margin: .75rem 0 1.5rem; }
-      table { width: 100%; border-collapse: collapse; }
-      th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent); }
-      tr.eol td:first-child { color: var(--eol); font-weight: 600; }
-      tr.soon td:first-child { color: var(--soon); font-weight: 600; }
-      tr.ok td:first-child { color: var(--ok); }
-      tr.unknown { opacity: .65; }
-      footer { margin-top: 2rem; font-size: .875rem; opacity: .7; }
-    </style>
   </body>
 </html>

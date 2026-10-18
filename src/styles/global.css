@@ -1,0 +1,9 @@
+@import "tailwindcss";
+@source "../../node_modules/@kjaniec-dev/ui";
+@import "@kjaniec-dev/design/tailwind.css";
+@import "@kjaniec-dev/ui/ui.css";
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+}

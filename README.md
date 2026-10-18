@@ -11,7 +11,7 @@ Parsing and matching run in the browser; nothing is uploaded.
   (no runtime API calls, so no CORS dependency). It fails the build if a mapped slug does not exist upstream.
 - `src/lib/parsers/*` turn each file type into components (`product` slug + `version`).
 - `src/lib/match.ts` finds the release cycle and classifies `eol` / `soon` / `ok` / `unknown`.
-- `src/pages/index.astro` is the UI. A scheduled workflow rebuilds it daily to refresh the snapshot.
+- `src/components/Checker.tsx` is the UI: a React island built with [`@kjaniec-dev/ui`](https://ui.kjaniec.dev) and `@kjaniec-dev/design` (Tailwind v4 tokens, light/dark by OS setting), mounted from `src/pages/index.astro`. A scheduled workflow rebuilds the site daily to refresh the snapshot.
 
 ## Develop
 
