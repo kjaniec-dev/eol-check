@@ -36,14 +36,14 @@ describe('parsers', () => {
       ['react', '17.0.2'],
       ['nextjs', '13.4.1'],
       ['vue', null],
-      ['typescript', '5.4.5'],
+      [null, '5.4.5'], // no upstream lifecycle data; keep visible as unknown
     ]);
     expect(parsePackageJson('not json')).toEqual([]);
   });
 
   it('pom.xml', () => {
     expect(pick(parsePomXml(fx('pom.xml')))).toEqual([
-      ['java', '8'],
+      [null, '8'], // the manifest does not identify the JDK distribution
       ['spring-boot', '2.7.18'],
     ]);
   });
@@ -55,6 +55,14 @@ describe('parsers', () => {
     expect(detectFileType(fx('Dockerfile'))).toBe('Dockerfile');
     expect(detectFileType('hello')).toBeNull();
     expect(parseAny('hello').components).toEqual([]);
+  });
+
+  it('keeps Java distributions distinct from unspecified Java images', () => {
+    expect(pick(parseDockerfile('FROM openjdk:17\nFROM eclipse-temurin:17\nFROM amazoncorretto:17'))).toEqual([
+      [null, '17'],
+      ['eclipse-temurin', '17'],
+      ['amazon-corretto', '17'],
+    ]);
   });
 });
 

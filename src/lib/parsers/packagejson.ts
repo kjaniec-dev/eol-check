@@ -30,8 +30,8 @@ export function parsePackageJson(text: string): Component[] {
   };
   for (const [name, range] of Object.entries(deps)) {
     const product = NPM_PACKAGES[name];
-    if (!product || typeof range !== 'string') continue;
-    out.push({ source: SOURCE, kind: 'framework', label: `${name} ${range}`, product, version: minVersion(range) });
+    if (!Object.hasOwn(NPM_PACKAGES, name) || typeof range !== 'string') continue;
+    out.push({ source: SOURCE, kind: 'framework', label: `${name} ${range}`, product: product ?? null, version: minVersion(range) });
   }
   return out;
 }

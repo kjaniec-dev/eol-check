@@ -1,13 +1,14 @@
 // Maps names used in manifests to endoflife.date product slugs.
-// scripts/fetch-eol.ts warns about slugs missing from the API, so typos surface at build time.
+// scripts/fetch-eol.ts fails on slugs missing from the API, so typos surface at build time.
+// null keeps recognised components visible as unknown without requesting nonexistent products.
 
-export const DOCKER_IMAGES: Record<string, string> = {
+export const DOCKER_IMAGES: Record<string, string | null> = {
   node: 'nodejs',
   python: 'python',
   golang: 'go',
   php: 'php',
   ruby: 'ruby',
-  openjdk: 'java',
+  openjdk: null, // No generic Java lifecycle; support depends on the distribution.
   'eclipse-temurin': 'eclipse-temurin',
   amazoncorretto: 'amazon-corretto',
   'dotnet/sdk': 'dotnet',
@@ -34,13 +35,13 @@ export const CODENAMES: Record<string, Record<string, string>> = {
   ubuntu: { bionic: '18.04', focal: '20.04', jammy: '22.04', noble: '24.04' },
 };
 
-export const NPM_PACKAGES: Record<string, string> = {
+export const NPM_PACKAGES: Record<string, string | null> = {
   react: 'react',
   next: 'nextjs',
   vue: 'vue',
   nuxt: 'nuxt',
   '@angular/core': 'angular',
-  typescript: 'typescript',
+  typescript: null, // Not tracked by endoflife.date.
   express: 'express',
   jquery: 'jquery',
   bootstrap: 'bootstrap',
@@ -49,7 +50,7 @@ export const NPM_PACKAGES: Record<string, string> = {
 
 export const NODE = 'nodejs';
 export const GO = 'go';
-export const JAVA = 'java';
+export const JAVA = null; // pom.xml specifies a language level, not a JDK distribution.
 export const SPRING_BOOT = 'spring-boot';
 
 export function allProductSlugs(): string[] {
@@ -61,6 +62,6 @@ export function allProductSlugs(): string[] {
       GO,
       JAVA,
       SPRING_BOOT,
-    ]),
+    ].filter((slug): slug is string => slug !== null)),
   ];
 }
