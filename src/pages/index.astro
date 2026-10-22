@@ -11,7 +11,7 @@ const generated = data.generatedAt.slice(0, 10);
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>EOL Check</title>
-    <meta name="description" content="Paste package.json, pom.xml, go.mod or a Dockerfile and see which components are past end of support. Runs entirely in your browser." />
+    <meta name="description" content="Paste package.json, pom.xml, go.mod, pyproject.toml, .python-version or a Dockerfile and see which components are past end of support. Runs entirely in your browser." />
     <script is:inline>
       // Follow the OS colour scheme; the design package remaps tokens under .dark
       if (matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.classList.add('dark');
@@ -22,7 +22,7 @@ const generated = data.generatedAt.slice(0, 10);
       <header class="flex flex-col gap-2">
         <h1 class="m-0 text-3xl font-bold tracking-tight">EOL Check</h1>
         <p class="m-0 text-muted-foreground">
-          Paste or drop a <code>package.json</code>, <code>pom.xml</code>, <code>go.mod</code> or <code>Dockerfile</code>.
+          Paste or drop a <code>package.json</code>, <code>pom.xml</code>, <code>go.mod</code>, <code>pyproject.toml</code>, <code>.python-version</code> or <code>Dockerfile</code>.
           Everything is parsed in your browser; nothing is uploaded.
         </p>
       </header>

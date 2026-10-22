@@ -1,6 +1,6 @@
 # eol-check
 
-Paste a `package.json`, `pom.xml`, `go.mod` or `Dockerfile` and see which runtimes, frameworks and base images
+Paste a `package.json`, `pom.xml`, `go.mod`, `pyproject.toml`, `.python-version` or `Dockerfile` and see which runtimes, frameworks and base images
 are past end of support (or will be within 6 months). Data comes from [endoflife.date](https://endoflife.date).
 
 Parsing and matching run in the browser; nothing is uploaded.
@@ -10,6 +10,8 @@ Parsing and matching run in the browser; nothing is uploaded.
 - `scripts/fetch-eol.ts` snapshots the products listed in `src/lib/mapping.ts` into `src/data/eol.json` at build time
   (no runtime API calls, so no CORS dependency). It fails the build if a mapped slug does not exist upstream.
 - `src/lib/parsers/*` turn each file type into components (`product` slug + `version`).
+- Python: `pyproject.toml` reads `[project].requires-python` (or legacy `[tool.poetry.dependencies].python`) and checks the minimum declared version; `.python-version` reads pinned Python versions. A constraint is a compatibility declaration, not proof of the interpreter installed in a deployment. Upper bounds alone remain unknown.
+- Dockerfile: global `ARG` defaults resolve `$VAR` and `${VAR}` in image references, including chained values and fallback expressions. Stage-local `ARG`/`ENV` values do not apply to `FROM`; arguments supplied only at build time remain unknown.
 - `src/lib/match.ts` finds the release cycle and classifies `eol` / `soon` / `ok` / `unknown`.
 - TypeScript and Java without a known JDK distribution are reported as `unknown`: endoflife.date has no generic lifecycle data for them. Temurin and Corretto images use their distribution-specific data.
 - `src/components/Checker.tsx` is the UI: a React island built with [`@kjaniec-dev/ui`](https://ui.kjaniec.dev) and `@kjaniec-dev/design` (Tailwind v4 tokens, light/dark by OS setting), mounted from `src/pages/index.astro`. A scheduled workflow rebuilds the site daily to refresh the snapshot.

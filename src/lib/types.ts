@@ -8,7 +8,7 @@ export interface Component {
   label: string;
   /** endoflife.date product slug, or null when we don't know the product. */
   product: string | null;
-  /** Version as written/extracted, or null when unpinned (latest, ARG, ...). */
+  /** Version as written/extracted, or null when unpinned (latest, unresolved ARG, ...). */
   version: string | null;
 }
 

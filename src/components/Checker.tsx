@@ -52,7 +52,7 @@ export default function Checker() {
           rows={10}
           spellCheck={false}
           className="font-mono text-sm"
-          placeholder="Paste package.json, pom.xml, go.mod or a Dockerfile…"
+          placeholder="Paste package.json, pom.xml, go.mod, pyproject.toml, .python-version or a Dockerfile…"
           aria-label="Manifest contents"
           value={pasted}
           onChange={(e) => setPasted(e.target.value)}
@@ -74,7 +74,7 @@ export default function Checker() {
         <section aria-live="polite" className="flex flex-col gap-4">
           {unrecognised > 0 && (
             <Alert variant="warning" title="Unrecognised input">
-              {unrecognised} input(s) did not look like package.json, pom.xml, go.mod or a Dockerfile.
+              {unrecognised} input(s) did not look like package.json, pom.xml, go.mod, pyproject.toml, .python-version or a Dockerfile.
             </Alert>
           )}
           {findings.length > 0 && (

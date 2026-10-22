@@ -21,7 +21,7 @@ describe('parsers', () => {
       ['debian', '12'],
       ['postgresql', '16'],
       ['python', null],
-      ['nodejs', null], // tag is an ARG, unresolved
+      ['nodejs', '18'], // resolved from the global ARG default
     ]);
   });
 
