@@ -5,6 +5,8 @@ are past end of support (or will be within 6 months). Data comes from [endoflife
 
 Parsing and matching run in the browser; nothing is uploaded.
 
+Use **Try example** to load a sample manifest. Click a status counter (including **Unknown**) to filter the report; click it again or choose **All results** to reset. Uploaded files can be removed individually. Recognised inputs without checked products show a warning rather than an empty report. **Copy all results as Markdown** exports the complete report, including source filenames, regardless of the active filter.
+
 ## How it works
 
 - `scripts/fetch-eol.ts` snapshots the products listed in `src/lib/mapping.ts` into `src/data/eol.json` at build time
