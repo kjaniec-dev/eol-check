@@ -78,6 +78,8 @@ Commit `wrangler.jsonc`, `package.json` and `package-lock.json` before building.
 
 Cloudflare deploys pushes using its Git integration; no Cloudflare API token or account ID is needed in GitHub Actions. The GitHub workflow deploys GitHub Pages separately on pushes to `main`, manual runs and the daily schedule. Select GitHub Actions as the Pages source. Its default path is `/eol-check/`. If Pages serves a custom domain at its root, set repository variable `GITHUB_PAGES_BASE_PATH` to `/`; if the repository is renamed, use its new `/repository-name/` path.
 
+For non-production branches, use `npx wrangler preview` as the preview deploy command. The empty `previews` block in `wrangler.jsonc` enables Worker Previews; static assets and compatibility settings stay at the top level. Keep `npx wrangler deploy --config wrangler.jsonc` as the production deploy command.
+
 ### Daily Cloudflare data refresh
 
 Pushes rebuild Cloudflare automatically, but the EOL snapshot also needs rebuilding when code stays unchanged. In the Cloudflare Worker's Builds settings, create a Deploy Hook targeting `main`. Store its complete URL as repository Actions secret `CLOUDFLARE_BUILD_HOOK_URL`. The existing daily/manual GitHub workflow then triggers that Cloudflare build without duplicating deployments on push. Without the optional hook, only GitHub Pages gets scheduled refreshes; Cloudflare still builds on pushes.
