@@ -101,20 +101,30 @@ export default function Checker() {
         />
         <Dropzone className="md:flex md:[&>button]:flex-1" onFiles={onFiles} multiple />
         {files.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 text-sm md:col-start-2">
-            {files.map((f, i) => (
-              <span key={`${f.name}-${i}`} className="inline-flex items-center gap-1">
-                <Badge variant="info">{f.name}</Badge>
-                <Button size="sm" variant="secondary" aria-label={`Remove ${f.name}, file ${i + 1}`}
-                  onClick={() => setFiles((prev) => prev.filter((_, index) => index !== i))}>
-                  <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          <div className="flex min-w-0 flex-wrap items-end gap-x-4 gap-y-2 text-sm md:col-start-2">
+            <ul aria-label="Added files" className="m-0 flex min-w-0 flex-1 list-none flex-wrap gap-2 p-0">
+              {files.map((f, i) => (
+                <li key={`${f.name}-${i}`} className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-md border border-border bg-muted/40 py-1 pl-2.5 pr-1">
+                  <svg className="size-4 shrink-0 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                     strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="m6 6 12 12M6 18 18 6" />
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M8 13h8M8 17h5" />
                   </svg>
-                </Button>
-              </span>
-            ))}
-            <Button size="sm" variant="danger" onClick={() => setFiles([])}>Clear</Button>
+                  <span className="truncate" title={f.name}>{f.name}</span>
+                  <button type="button" aria-label={`Remove ${f.name}, file ${i + 1}`} title={`Remove ${f.name}`}
+                    className="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-background hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    onClick={() => setFiles((prev) => prev.filter((_, index) => index !== i))}>
+                    <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="m6 6 12 12M6 18 18 6" />
+                    </svg>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button type="button" onClick={() => setFiles([])}
+              className="shrink-0 cursor-pointer rounded-sm py-2 text-xs text-muted-foreground underline decoration-border underline-offset-4 transition-colors hover:text-foreground hover:decoration-current focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+              Clear all
+            </button>
           </div>
         )}
       </div>
