@@ -14,6 +14,8 @@ Parsing and matching run in the browser; nothing is uploaded.
 - Dockerfile: global `ARG` defaults resolve `$VAR` and `${VAR}` in image references, including chained values and fallback expressions. Stage-local `ARG`/`ENV` values do not apply to `FROM`; arguments supplied only at build time remain unknown.
 - `src/lib/match.ts` finds the release cycle and classifies `eol` / `soon` / `ok` / `unknown`.
 - TypeScript and Java without a known JDK distribution are reported as `unknown`: endoflife.date has no generic lifecycle data for them. Temurin and Corretto images use their distribution-specific data.
+- TypeScript is displayed by name with an explicit lifecycle-data explanation, including when its version is a range such as `^5`. Its unknown status reflects missing support dates, not a failure to parse the version.
+- npm ranges use the npm semver parser (`^`, `~`, `>=`, `>`, `<=`, `<`, wildcards, hyphen ranges and `||`). The reported version is the lowest allowed version, not an installed version. Upper-only, unbounded, invalid or impossible ranges remain unknown.
 - `src/components/Checker.tsx` is the UI: a React island built with [`@kjaniec-dev/ui`](https://ui.kjaniec.dev) and `@kjaniec-dev/design` (Tailwind v4 tokens, light/dark by OS setting), mounted from `src/pages/index.astro`. A scheduled workflow rebuilds the site daily to refresh the snapshot.
 
 ## Develop

@@ -1,12 +1,29 @@
 import type { Component } from '../types.ts';
 import { NODE, NPM_PACKAGES } from '../mapping.ts';
+import Range from 'semver/classes/range.js';
+import semverMinVersion from 'semver/ranges/min-version.js';
+import compare from 'semver/functions/compare.js';
 
 const SOURCE = 'package.json';
 
-/** Lowest version a semver range admits, e.g. ">=18 <21" -> "18", "^20.1.0" -> "20.1.0". */
+/** Minimum admitted by an npm range; upper-only and unbounded ranges stay unknown. */
 export function minVersion(range: string): string | null {
-  const m = /(\d+(?:\.\d+){0,2})/.exec(range);
-  return m ? m[1]! : null;
+  try {
+    const parsed = new Range(range);
+    let minimum: ReturnType<typeof semverMinVersion> = null;
+    for (const comparators of parsed.set) {
+      // Ignore impossible OR branches, but do not invent 0.0.0 for an unbounded one.
+      const candidate = semverMinVersion(comparators.map((c) => c.value).join(' '));
+      if (!candidate) continue;
+      const hasLowerBound = comparators.some((c) =>
+        c.operator === '>=' || c.operator === '>' || (c.operator === '' && c.value !== ''));
+      if (!hasLowerBound) return null;
+      if (!minimum || compare(candidate, minimum) < 0) minimum = candidate;
+    }
+    return minimum?.version ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export function parsePackageJson(text: string): Component[] {
@@ -31,7 +48,11 @@ export function parsePackageJson(text: string): Component[] {
   for (const [name, range] of Object.entries(deps)) {
     const product = NPM_PACKAGES[name];
     if (!Object.hasOwn(NPM_PACKAGES, name) || typeof range !== 'string') continue;
-    out.push({ source: SOURCE, kind: 'framework', label: `${name} ${range}`, product: product ?? null, version: minVersion(range) });
+    out.push({
+      source: SOURCE, kind: 'framework', label: `${name} ${range}`,
+      product: product ?? null, version: minVersion(range),
+      ...(name === 'typescript' ? { productLabel: 'TypeScript' } : {}),
+    });
   }
   return out;
 }

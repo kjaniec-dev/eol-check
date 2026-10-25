@@ -32,7 +32,7 @@ describe('parsers', () => {
 
   it('package.json', () => {
     expect(pick(parsePackageJson(fx('package.json')))).toEqual([
-      ['nodejs', '18'],
+      ['nodejs', '18.0.0'],
       ['react', '17.0.2'],
       ['nextjs', '13.4.1'],
       ['vue', null],
@@ -78,6 +78,25 @@ const data: Dataset = {
 const today = new Date('2026-02-01T00:00:00Z');
 
 describe('matching', () => {
+  it.each([
+    ['^5', '5.0.0'],
+    ['^5.6.0', '5.6.0'],
+    ['~5.6.0', '5.6.0'],
+    ['5.6.3', '5.6.3'],
+  ])('recognises TypeScript %s while explaining unavailable lifecycle data', (range, version) => {
+    const components = parsePackageJson(JSON.stringify({ devDependencies: { typescript: range } }));
+    const findings = check(components, data, today);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      productLabel: 'TypeScript',
+      status: 'unknown',
+      note: 'No lifecycle data on endoflife.date',
+      cycle: null,
+      eolFrom: null,
+      component: { label: `typescript ${range}`, version, source: 'package.json' },
+    });
+  });
+
   it('picks the longest cycle on a segment boundary', () => {
     const rs = data.products.python!.releases;
     expect(findRelease(rs, '3.11.4')?.name).toBe('3.11');

@@ -24,8 +24,11 @@ export function statusOf(r: Release, today: Date): Status {
 
 export function check(components: Component[], data: Dataset, today = new Date()): Finding[] {
   return components.map((component): Finding => {
-    const base = { component, productLabel: null, cycle: null, eolFrom: null, note: null };
-    if (!component.product) return { ...base, status: 'unknown', note: 'Unrecognised product' };
+    const base = { component, productLabel: component.productLabel ?? null, cycle: null, eolFrom: null, note: null };
+    if (!component.product) return {
+      ...base, status: 'unknown',
+      note: component.productLabel ? 'No lifecycle data on endoflife.date' : 'Unrecognised product',
+    };
     const product = data.products[component.product];
     if (!product) return { ...base, status: 'unknown', note: 'No data for this product' };
     const productLabel = product.label;
