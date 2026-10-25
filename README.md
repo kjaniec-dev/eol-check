@@ -5,6 +5,8 @@ are past end of support (or will be within 6 months). Data comes from [endoflife
 
 Parsing and matching run in the browser; nothing is uploaded.
 
+Use **Try example** to load a sample manifest. Click a status counter (including **Unknown**) to filter the report; click it again or choose **All results** to reset. Uploaded files can be removed individually. Recognised inputs without checked products show a warning rather than an empty report. **Copy all results as Markdown** exports the complete report, including source filenames, regardless of the active filter.
+
 ## How it works
 
 - `scripts/fetch-eol.ts` snapshots the products listed in `src/lib/mapping.ts` into `src/data/eol.json` at build time
@@ -75,6 +77,8 @@ Connect `kjaniec-dev/eol-check` to Cloudflare Workers Builds with:
 Commit `wrangler.jsonc`, `package.json` and `package-lock.json` before building. With the checked-in static-assets config, Wrangler deploys `dist/` directly. It must not run framework auto-configuration or `astro add cloudflare`; an SSR adapter is unnecessary.
 
 Cloudflare deploys pushes using its Git integration; no Cloudflare API token or account ID is needed in GitHub Actions. The GitHub workflow deploys GitHub Pages separately on pushes to `main`, manual runs and the daily schedule. Select GitHub Actions as the Pages source. Its default path is `/eol-check/`. If Pages serves a custom domain at its root, set repository variable `GITHUB_PAGES_BASE_PATH` to `/`; if the repository is renamed, use its new `/repository-name/` path.
+
+For non-production branches, use `npx wrangler preview` as the preview deploy command. The empty `previews` block in `wrangler.jsonc` enables Worker Previews; static assets and compatibility settings stay at the top level. Keep `npx wrangler deploy --config wrangler.jsonc` as the production deploy command.
 
 ### Daily Cloudflare data refresh
 

@@ -3,6 +3,7 @@
   "name": "eol-check",
   "compatibility_date": "2026-10-25",
   "workers_dev": true,
+  "previews": {},
   "routes": [
     {
       "pattern": "eol-check.kjaniec.dev",
