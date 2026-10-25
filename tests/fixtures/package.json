@@ -1,0 +1,6 @@
+{
+  "name": "demo",
+  "engines": { "node": ">=18 <21" },
+  "dependencies": { "react": "^17.0.2", "next": "~13.4.1", "left-pad": "1.0.0", "vue": "workspace:*" },
+  "devDependencies": { "typescript": "5.4.5" }
+}

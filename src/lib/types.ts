@@ -1,0 +1,44 @@
+export type ComponentKind = 'runtime' | 'framework' | 'image';
+
+export interface Component {
+  /** Which file type produced this entry, e.g. "Dockerfile". */
+  source: string;
+  kind: ComponentKind;
+  /** Name as written in the file, e.g. "node:18-alpine" or "react". */
+  label: string;
+  /** endoflife.date product slug, or null when we don't know the product. */
+  product: string | null;
+  /** Known product name, including products without upstream lifecycle data. */
+  productLabel?: string;
+  /** Version as written/extracted, or null when unpinned (latest, unresolved ARG, ...). */
+  version: string | null;
+}
+
+export interface Release {
+  name: string;
+  isEol: boolean;
+  eolFrom: string | null;
+  isLts: boolean;
+}
+
+export interface Product {
+  label: string;
+  releases: Release[];
+}
+
+export interface Dataset {
+  generatedAt: string;
+  products: Record<string, Product>;
+}
+
+export type Status = 'eol' | 'soon' | 'ok' | 'unknown';
+
+export interface Finding {
+  component: Component;
+  status: Status;
+  productLabel: string | null;
+  cycle: string | null;
+  eolFrom: string | null;
+  /** Human-readable reason for "unknown" results. */
+  note: string | null;
+}
