@@ -1,4 +1,4 @@
-name: Build and deploy
+name: GitHub Pages and scheduled Cloudflare refresh
 
 on:
   push:
@@ -27,7 +27,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - run: npm run build # fetches endoflife.date, then builds
+      - run: npm run check
+      - name: Build GitHub Pages site
+        run: npm run build # fetches endoflife.date, then builds
+        env:
+          ASTRO_BASE_PATH: ${{ vars.GITHUB_PAGES_BASE_PATH || '/eol-check/' }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
@@ -41,3 +45,21 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  refresh-cloudflare:
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      CLOUDFLARE_BUILD_HOOK_URL: ${{ secrets.CLOUDFLARE_BUILD_HOOK_URL }}
+    steps:
+      - name: Trigger Cloudflare Workers Build
+        if: ${{ env.CLOUDFLARE_BUILD_HOOK_URL != '' }}
+        run: |
+          curl --fail --silent --show-error --request POST "$CLOUDFLARE_BUILD_HOOK_URL" |
+            jq --exit-status '.success == true'
+      - name: Explain missing optional build hook
+        if: ${{ env.CLOUDFLARE_BUILD_HOOK_URL == '' }}
+        run: echo '::notice::Set CLOUDFLARE_BUILD_HOOK_URL to refresh Cloudflare data on scheduled runs. Push deployments are managed by Cloudflare Git integration.'

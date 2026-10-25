@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "eol-check",
+  "compatibility_date": "2026-10-25",
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "eol-check.kjaniec.dev",
+      "custom_domain": true
+    }
+  ],
+  "assets": {
+    "directory": "./dist"
+  }
+}

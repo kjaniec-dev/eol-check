@@ -5,6 +5,19 @@ import { detectFileType, parseAny } from '../src/lib/parsers/index.ts';
 const versions = (text: string) => parseAny(text).components.map((c) => [c.product, c.version]);
 
 describe('Python manifests', () => {
+  it('reads the Python constraint from uv.lock, not package versions', () => {
+    const result = parseAny('version = 1\nrevision = 3\nrequires-python = ">=3.10,<4"\n[[package]]\nname = "example"\nversion = "9.9.9"');
+    expect(result.type).toBe('uv.lock');
+    expect(result.components).toEqual([
+      { source: 'uv.lock', kind: 'runtime', label: 'Python >=3.10,<4', product: 'python', version: '3.10' },
+    ]);
+  });
+
+  it('handles uv upper-only constraints and malformed lock files', () => {
+    expect(versions('version = 1\nrequires-python = "<3.12"')).toEqual([['python', null]]);
+    expect(parseAny('version = 1\nrequires-python = "unterminated').components).toEqual([]);
+  });
+
   it('reads the minimum Python version from project metadata', () => {
     const text = '[project]\nname = "example"\nrequires-python = ">=3.9,<4"';
     expect(detectFileType(text)).toBe('pyproject.toml');

@@ -52,6 +52,7 @@ export const NODE = 'nodejs';
 export const GO = 'go';
 export const JAVA = null; // pom.xml specifies a language level, not a JDK distribution.
 export const SPRING_BOOT = 'spring-boot';
+export const ECOSYSTEM_PRODUCTS = ['django', 'php', 'laravel', 'symfony', 'ruby-on-rails', 'ruby'];
 
 export function allProductSlugs(): string[] {
   return [
@@ -62,6 +63,7 @@ export function allProductSlugs(): string[] {
       GO,
       JAVA,
       SPRING_BOOT,
+      ...ECOSYSTEM_PRODUCTS,
     ].filter((slug): slug is string => slug !== null)),
   ];
 }

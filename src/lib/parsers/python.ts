@@ -75,3 +75,17 @@ export function parsePythonVersion(text: string): Component[] {
     source: '.python-version', kind: 'runtime', label: `Python ${version}`, product: 'python', version,
   }));
 }
+
+export function parseUvLock(text: string): Component[] {
+  try {
+    const doc = parse(text);
+    const range = doc['requires-python'];
+    if (typeof doc.version !== 'number' || typeof range !== 'string') return [];
+    return [{
+      source: 'uv.lock', kind: 'runtime', label: `Python ${range.trim()}`,
+      product: 'python', version: minimumPythonVersion(range),
+    }];
+  } catch {
+    return [];
+  }
+}

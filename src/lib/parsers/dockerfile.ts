@@ -77,6 +77,52 @@ function versionFromTag(image: string, tag: string): string | null {
   return m ? m[1]! : null;
 }
 
+/** Shared image interpretation for Dockerfile and Compose. */
+export function parseImageReference(ref: string, source: string, label = ref): Component[] {
+  const [withoutDigest] = ref.split('@');
+  const colon = withoutDigest!.lastIndexOf(':');
+  const hasTag = colon > withoutDigest!.lastIndexOf('/');
+  const repository = hasTag ? withoutDigest!.slice(0, colon) : withoutDigest!;
+  let name = normalizeImage(repository);
+  const tag = hasTag ? withoutDigest!.slice(colon + 1) : null;
+  // Distroless pins runtime and OS cycles in the repository name, not the tag.
+  const distroless = /^gcr\.io\/distroless\/(nodejs(\d+)|python3|java(\d+)|static|base|base-nossl|cc|java-base)-debian(\d+)$/.exec(repository);
+  if (distroless) {
+    const [, runtime, node, java, debian] = distroless;
+    const out: Component[] = [];
+    if (node) out.push({ source, kind: 'image', label, product: 'nodejs', version: node });
+    if (runtime === 'python3') out.push({ source, kind: 'image', label, product: 'python', version: null });
+    if (java) out.push({ source, kind: 'image', label, product: null, productLabel: 'Java', version: java });
+    out.push({ source, kind: 'image', label, product: 'debian', version: debian! });
+    return out;
+  }
+  if (repository.startsWith('cgr.dev/chainguard/')) {
+    const image = repository.slice('cgr.dev/chainguard/'.length);
+    name = image === 'go' ? 'golang' : image;
+  }
+  const bitnami = /^(?:(?:docker\.io|index\.docker\.io|registry-1\.docker\.io)\/|public\.ecr\.aws\/)?bitnami\/([^/]+)$/.exec(repository);
+  if (bitnami) {
+    const aliases: Record<string, string> = { postgresql: 'postgres', mongodb: 'mongo', apache: 'httpd', java: 'openjdk' };
+    name = aliases[bitnami[1]!] ?? bitnami[1]!;
+  }
+  const ecrLibrary = /^public\.ecr\.aws\/docker\/library\/([^/]+)$/.exec(repository);
+  if (ecrLibrary) name = ecrLibrary[1]!;
+  if (repository === 'public.ecr.aws/amazoncorretto/amazoncorretto') name = 'amazoncorretto';
+  const lambda = /^public\.ecr\.aws\/lambda\/(nodejs|python|ruby|java|dotnet)$/.exec(repository);
+  if (lambda) {
+    const aliases: Record<string, string> = { nodejs: 'node', java: 'openjdk', dotnet: 'dotnet/runtime' };
+    name = aliases[lambda[1]!] ?? lambda[1]!;
+  }
+  let version = tag && !/[$ {}]/.test(tag) ? versionFromTag(name, tag) : null;
+  if (lambda?.[1] === 'dotnet' && version && /^\d+$/.test(version)) version += '.0';
+  return [{
+    source, kind: 'image', label, product: DOCKER_IMAGES[name] ?? null,
+    version,
+    ...(version && /^\d+$/.test(version) && tag && /^v?\d+(?:-[\w.-]+)?$/.test(tag) && !ref.includes('@')
+      ? { floatingMajorTag: true as const } : {}),
+  }];
+}
+
 export function parseDockerfile(text: string): Component[] {
   const out: Component[] = [];
   const aliases = new Set<string>();
@@ -100,20 +146,7 @@ export function parseDockerfile(text: string): Component[] {
     if (alias) aliases.add(alias.toLowerCase());
     if (ref.toLowerCase() === 'scratch' || isStageRef) continue;
 
-    const [withoutDigest] = ref.split('@');
-    const colon = withoutDigest!.lastIndexOf(':');
-    const hasTag = colon > withoutDigest!.lastIndexOf('/');
-    const name = normalizeImage(hasTag ? withoutDigest!.slice(0, colon) : withoutDigest!);
-    const tag = hasTag ? withoutDigest!.slice(colon + 1) : null;
-    const product = DOCKER_IMAGES[name] ?? null;
-
-    out.push({
-      source: SOURCE,
-      kind: 'image',
-      label: label!,
-      product,
-      version: tag && !tag.includes('$') ? versionFromTag(name, tag) : null,
-    });
+    out.push(...parseImageReference(ref, SOURCE, label!));
   }
   return out;
 }

@@ -33,6 +33,7 @@ export function parsePackageJson(text: string): Component[] {
   } catch {
     return [];
   }
+  if (!pkg || typeof pkg !== 'object' || Array.isArray(pkg)) return [];
   const out: Component[] = [];
 
   const node = pkg.engines?.node;

@@ -15,17 +15,20 @@ const VARIANT = { eol: 'danger', soon: 'warning', ok: 'success', unknown: 'neutr
 
 export default function Checker() {
   const [pasted, setPasted] = useState('');
+  const [pastedType, setPastedType] = useState('');
   const [files, setFiles] = useState<{ name: string; text: string }[]>([]);
   const [copied, setCopied] = useState(false);
 
   const { findings, unrecognised } = useMemo(() => {
-    const inputs = [...files.map((f) => f.text), ...(pasted.trim() ? [pasted] : [])];
-    const parsed = inputs.map(parseAny);
+    const parsed = [
+      ...files.map((f) => parseAny(f.text, f.name)),
+      ...(pasted.trim() ? [parseAny(pasted, pastedType || undefined)] : []),
+    ];
     return {
       findings: sortFindings(check(parsed.flatMap((p) => p.components), dataset)),
       unrecognised: parsed.filter((p) => !p.type).length,
     };
-  }, [pasted, files]);
+  }, [pasted, pastedType, files]);
 
   const count = (s: Status) => findings.filter((f) => f.status === s).length;
   const hasInput = files.length > 0 || pasted.trim() !== '';
@@ -36,9 +39,9 @@ export default function Checker() {
   }
 
   async function copyMarkdown() {
-    const lines = ['| Status | Component | Version | Cycle | Support ends |', '|---|---|---|---|---|'];
+    const lines = ['| Status | Component | Version | Cycle | Support ends | Note |', '|---|---|---|---|---|---|'];
     for (const f of findings) {
-      lines.push(`| ${LABEL[f.status]} | ${f.productLabel ?? f.component.label} | ${f.component.version ?? ''} | ${f.cycle ?? ''} | ${f.eolFrom ?? ''} |`);
+      lines.push(`| ${LABEL[f.status]} | ${f.productLabel ?? f.component.label} | ${f.component.version ?? ''} | ${f.cycle ?? ''} | ${f.eolFrom ?? ''} | ${f.note ?? ''} |`);
     }
     await navigator.clipboard.writeText(lines.join('\n'));
     setCopied(true);
@@ -47,34 +50,46 @@ export default function Checker() {
 
   return (
     <div className="flex flex-col gap-6">
+      <label className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+        Pasted version file
+        <select
+          aria-label="Pasted version file"
+          className="rounded-md border border-border bg-background px-2 py-1 text-foreground"
+          value={pastedType}
+          onChange={(e) => setPastedType(e.target.value)}
+        >
+          <option value="">Auto detect manifest</option>
+          <option value=".nvmrc">Node.js (.nvmrc / .node-version)</option>
+          <option value=".python-version">Python (.python-version)</option>
+          <option value=".ruby-version">Ruby (.ruby-version)</option>
+        </select>
+      </label>
       <div className="grid gap-4 md:grid-cols-2">
         <Textarea
           rows={10}
           spellCheck={false}
           className="font-mono text-sm"
-          placeholder="Paste package.json, pom.xml, go.mod, pyproject.toml, .python-version or a Dockerfile…"
+          placeholder="Paste a manifest, lockfile, Dockerfile, Compose or Kubernetes YAML…"
           aria-label="Manifest contents"
           value={pasted}
           onChange={(e) => setPasted(e.target.value)}
         />
-        <div className="flex flex-col gap-2">
-          <Dropzone onFiles={onFiles} multiple />
-          {files.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              {files.map((f, i) => (
-                <Badge key={`${f.name}-${i}`} variant="info">{f.name}</Badge>
-              ))}
-              <Button size="sm" variant="ghost" onClick={() => setFiles([])}>Clear</Button>
-            </div>
-          )}
-        </div>
+        <Dropzone className="md:flex md:[&>button]:flex-1" onFiles={onFiles} multiple />
+        {files.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 text-sm md:col-start-2">
+            {files.map((f, i) => (
+              <Badge key={`${f.name}-${i}`} variant="info">{f.name}</Badge>
+            ))}
+            <Button size="sm" variant="danger" onClick={() => setFiles([])}>Clear</Button>
+          </div>
+        )}
       </div>
 
       {hasInput && (
         <section aria-live="polite" className="flex flex-col gap-4">
           {unrecognised > 0 && (
             <Alert variant="warning" title="Unrecognised input">
-              {unrecognised} input(s) did not look like package.json, pom.xml, go.mod, pyproject.toml, .python-version or a Dockerfile.
+              {unrecognised} input(s) could not be recognised. Check the supported formats above. For a plain version number, select its tool or upload the original file.
             </Alert>
           )}
           {findings.length > 0 && (

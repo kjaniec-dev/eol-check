@@ -12,6 +12,8 @@ export interface Component {
   productLabel?: string;
   /** Version as written/extracted, or null when unpinned (latest, unresolved ARG, ...). */
   version: string | null;
+  /** An un-digested container tag such as :8 or :8-alpine can follow newer minor cycles. */
+  floatingMajorTag?: true;
 }
 
 export interface Release {
@@ -39,6 +41,6 @@ export interface Finding {
   productLabel: string | null;
   cycle: string | null;
   eolFrom: string | null;
-  /** Human-readable reason for "unknown" results. */
+  /** Explanation of unknown results or inferred lifecycle cycles. */
   note: string | null;
 }

@@ -3,3 +3,5 @@ dist
 .astro
 # generated at build time by scripts/fetch-eol.ts
 src/data/eol.json
+.wrangler/
+.playwright-cli/
