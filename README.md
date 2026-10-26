@@ -37,7 +37,7 @@ generate it automatically before starting Astro.
 
 ### Quality checks
 
-Use Node.js 22.22.3 or newer on the Node.js 22 LTS line and npm 9.6.5 or newer.
+Use Node.js 22.23.4 or newer on the Node.js 22 LTS line and npm 9.6.5 or newer.
 
 ```sh
 npm ci
