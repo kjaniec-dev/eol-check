@@ -50,6 +50,10 @@ npm run format        # apply Prettier formatting (including Astro)
 The quality workflow runs on every pull request, pushes to `main` and manual dispatch.
 It uses read-only repository permissions, no deployment secrets and no deployment steps.
 The full build refreshes the EOL snapshot and requires access to endoflife.date.
+Snapshot requests have a 15-second timeout, up to four attempts with exponential backoff for
+transient network failures, HTTP 429 and server errors, and a concurrency limit of four; persistent
+errors fail the build with the affected product and attempt details rather than writing a partial
+snapshot.
 Generated data, build outputs, dependencies and local tool directories are excluded from formatting.
 The existing deployment workflow remains separate.
 
