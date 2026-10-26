@@ -22,7 +22,7 @@ describe('package-lock.json', () => {
       'node_modules/constructor': { version: '1.0.0' },
     }, dependencies: { vue: { version: '3.0.0' } } }));
     expect(versions(result)).toEqual([['react', '18.3.1'], ['angular', '18.2.0'], ['react', '19.0.0-rc.1'], [null, '5.6.3']]);
-    expect(result[3]).toMatchObject({ source: 'package-lock.json', kind: 'framework', productLabel: 'TypeScript' });
+    expect(result[3]).toMatchObject({ source: 'package-lock.json', kind: 'framework', productLabel: 'TypeScript', versionBasis: 'lockfile' });
   });
 
   it.each([undefined, null, 18, '^18.2.0', 'latest', 'file:../react-18.2.0', 'https://host/18.2.0.tgz', '18.2.0oops'])('keeps invalid installed version %s unknown', (version) => {

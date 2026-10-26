@@ -46,6 +46,8 @@ Django @ https://example.com/package.whl
   });
   it('reads default/develop Pipfile locks, preserving prereleases', () => {
     expect(pairs(parsePythonDependencies(JSON.stringify({ default: { django: { version: '==5.0rc1' }, bad: 42 }, develop: { Django: { version: '==5.0rc1' }, 'django-other': { version: '==8' } } }), 'Pipfile.lock'))).toEqual([['django', '5.0rc1']]);
+    expect(parsePythonDependencies('{"default":{"django":{"version":"==5.0rc1"}}}', 'Pipfile.lock')[0])
+      .toMatchObject({ versionBasis: 'lockfile' });
   });
   it.each(['poetry.lock', 'uv.lock'])('reads %s packages and keeps distinct resolved versions', (source) => {
     expect(pairs(parsePythonDependencies(`version = 1
@@ -76,6 +78,11 @@ django = "^6.0"
 Django = "^3.2"`, 'pyproject.toml'))).toEqual([
       ['django', '4.2.0'], ['django', '5.1.2'], ['django', '5.2.0'], ['django', '6.0.0'], ['django', '3.2.0'],
     ]);
+  });
+  it('distinguishes exact declarations, calculated minima and unresolved ranges', () => {
+    expect(parsePythonDependencies('Django==4.2.16', 'requirements.txt')[0]).toMatchObject({ version: '4.2.16', versionBasis: 'declared' });
+    expect(parsePythonDependencies('Django>=4.2,<5', 'requirements.txt')[0]).toMatchObject({ version: '4.2.0', versionBasis: 'minimum' });
+    expect(parsePythonDependencies('Django<5', 'requirements.txt')[0]).toMatchObject({ version: null, versionBasis: 'range' });
   });
   it('ignores Poetry path, git and URL dependencies', () => {
     expect(parsePythonDependencies('[tool.poetry.dependencies]\ndjango = {path = "../django", version = "5.0"}', 'pyproject.toml')).toEqual([]);
@@ -146,7 +153,10 @@ describe('Composer', () => {
     expect(items[0]).toMatchObject({ source: 'composer.json', kind: 'runtime' });
   });
   it('normalizes lock version prefixes and reads platform ranges, omitting unknown packages', () => {
-    expect(pairs(parseComposer(JSON.stringify({ packages: [{ name: 'laravel/framework', version: 'v11.2.3' }, { name: 'symfony/console', version: 'v7.1.0-RC1' }, { name: 'other/rails', version: '1' }], 'packages-dev': [{ name: 'symfony/console', version: 'v7.1.0-RC1' }], platform: { php: '>=8.2 <9' }, 'platform-dev': { php: '^8.3' } }), 'composer.lock'))).toEqual([['laravel', '11.2.3'], ['symfony', '7.1.0-RC1'], ['php', '8.2.0'], ['php', '8.3.0']]);
+    const items = parseComposer(JSON.stringify({ packages: [{ name: 'laravel/framework', version: 'v11.2.3' }, { name: 'symfony/console', version: 'v7.1.0-RC1' }, { name: 'other/rails', version: '1' }], 'packages-dev': [{ name: 'symfony/console', version: 'v7.1.0-RC1' }], platform: { php: '>=8.2 <9' }, 'platform-dev': { php: '^8.3' } }), 'composer.lock');
+    expect(pairs(items)).toEqual([['laravel', '11.2.3'], ['symfony', '7.1.0-RC1'], ['php', '8.2.0'], ['php', '8.3.0']]);
+    expect(items[0]).toMatchObject({ versionBasis: 'lockfile' });
+    expect(items[2]).toMatchObject({ versionBasis: 'minimum' });
   });
   it.each(['null', '[]', '42', '{bad', '{"require":[],"packages":[null,2,{"name":"php","version":3}]}'])('handles malformed data %s', (text) => {
     expect(parseComposer(text, 'composer.lock')).toEqual([]);
@@ -177,6 +187,7 @@ RUBY VERSION
 BUNDLED WITH
    2.5.6`);
     expect(pairs(items)).toEqual([['ruby-on-rails', '7.1.3.4'], ['ruby-on-rails', '8.0.0.beta1'], ['ruby', '3.3.1']]);
+    expect(items.every((item) => item.versionBasis === 'lockfile')).toBe(true);
     expect(items.every((item) => item.source === 'Gemfile.lock')).toBe(true);
   });
   it.each(['rails (7.0)', 'DEPENDENCIES\n  rails (7.0)', 'RUBY VERSION\n  ruby nope', 'GEM\n  specs:\n    rails (~> 7.0)'])('ignores misleading or malformed input', (text) => {

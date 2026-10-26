@@ -1,5 +1,7 @@
 export type ComponentKind = 'runtime' | 'framework' | 'image';
 
+export type VersionBasis = 'declared' | 'minimum' | 'range' | 'lockfile' | 'image-reference';
+
 export interface Component {
   /** Which file type produced this entry, e.g. "Dockerfile". */
   source: string;
@@ -12,6 +14,8 @@ export interface Component {
   productLabel?: string;
   /** Version as written/extracted, or null when unpinned (latest, unresolved ARG, ...). */
   version: string | null;
+  /** Where the version used for this check came from. */
+  versionBasis?: VersionBasis;
   /** An un-digested container tag such as :8 or :8-alpine can follow newer minor cycles. */
   floatingMajorTag?: true;
 }

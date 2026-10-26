@@ -31,9 +31,15 @@ function exactVersion(value: unknown): string | null {
     ? value : null;
 }
 
-function component(source: string, name: string, range: string, product: string, version: string | null): Component {
+function component(source: string, name: string, range: string, product: string, version: string | null,
+  versionBasis: Component['versionBasis'] = version === null ? 'range' : 'declared'): Component {
   return { source, kind: product === 'php' || product === 'ruby' ? 'runtime' : 'framework',
-    label: `${name}${range ? ` ${range}` : ''}`, product, version };
+    label: `${name}${range ? ` ${range}` : ''}`, product, version, versionBasis };
+}
+
+function exactPythonDeclaration(range: string): boolean {
+  const exact = /^(?:===|==)\s*(.+)$/.exec(range.trim());
+  return exact ? exactVersion(exact[1]!) !== null : exactVersion(range.trim()) !== null;
 }
 
 /** PEP 440 numeric lower bounds; unsupported/excluded bounds stay unknown. */
@@ -70,7 +76,9 @@ export function parsePythonDependencies(text: string, source: string): Component
     if (name.toLowerCase().replace(/[-_.]+/g, '-') !== 'django') return;
     const version = locked ? exactVersion(range.replace(/^==/, '')) : pythonMinimum(range, poetry);
     if (locked && version === null) return;
-    out.push(component(source, name, range, 'django', version));
+    const versionBasis = locked ? 'lockfile' : version === null ? 'range'
+      : exactPythonDeclaration(range) ? 'declared' : 'minimum';
+    out.push(component(source, name, range, 'django', version, versionBasis));
   };
   const requirement = (value: unknown) => {
     if (typeof value !== 'string') return;
@@ -160,8 +168,10 @@ export function parseComposer(text: string, source: string): Component[] {
     // Branch aliases are unresolved even when their numeric prefix matches a release cycle.
     const unresolved = /\bdev\b|(?:^|\.)[x*](?:$|[.-])/i.test(value);
     const version = locked ? (unresolved ? null : exactVersion(value)) : minVersion(value.replace(/,/g, ' '));
+    const versionBasis = locked && name !== 'php' ? 'lockfile' : version === null ? 'range'
+      : exactVersion(value) ? 'declared' : 'minimum';
     // Composer tags commonly start with v; lifecycle cycles use numeric prefixes.
-    out.push(component(source, name, value, product, version?.replace(/^v/, '') ?? null));
+    out.push(component(source, name, value, product, version?.replace(/^v/, '') ?? null, versionBasis));
   };
   const filename = source.split(/[\\/]/).pop()!.toLowerCase();
   if (filename === 'composer.lock') {
@@ -199,10 +209,10 @@ export function parseGemfileLock(text: string): Component[] {
       if (/^  specs:\s*$/.test(line)) { specs = true; continue; }
       if (/^  \S/.test(line)) specs = false;
       const rails = specs ? /^    rails \(([^\s()]+)\)\s*$/.exec(line) : null;
-      if (rails && exactVersion(rails[1])) out.push(component(source, 'rails', rails[1]!, 'ruby-on-rails', rails[1]!));
+      if (rails && exactVersion(rails[1])) out.push(component(source, 'rails', rails[1]!, 'ruby-on-rails', rails[1]!, 'lockfile'));
     } else if (section === 'RUBY VERSION') {
       const ruby = /^\s+ruby (\d+\.\d+\.\d+)(?:p\d+)?(?:\s+\([^\r\n]*\))?\s*$/.exec(line);
-      if (ruby) out.push(component(source, 'ruby', ruby[1]!, 'ruby', ruby[1]!));
+      if (ruby) out.push(component(source, 'ruby', ruby[1]!, 'ruby', ruby[1]!, 'lockfile'));
     }
   }
   return unique(out);
