@@ -29,10 +29,10 @@ Najbliższa, niewielka iteracja ułatwiająca zrozumienie raportu.
 
 Pomóc przejść od informacji o EOL do wyboru wersji docelowej.
 
-- [ ] Przy produktach po EOL lub z kończącym się wsparciem pokazać wspierane wersje docelowe.
-- [ ] Preferować wydania LTS tam, gdzie produkt je oferuje.
-- [ ] Pokazywać datę końca wsparcia i pozostały okres wsparcia proponowanej wersji.
-- [ ] Wyraźnie opisać, że sugestia wynika z cyklu życia produktu i nie gwarantuje zgodności aplikacji po aktualizacji.
+- [x] Przy produktach po EOL lub z kończącym się wsparciem pokazać wspierane wersje docelowe.
+- [x] Preferować wydania LTS tam, gdzie produkt je oferuje.
+- [x] Pokazywać datę końca wsparcia i pozostały okres wsparcia proponowanej wersji.
+- [x] Wyraźnie opisać, że sugestia wynika z cyklu życia produktu i nie gwarantuje zgodności aplikacji po aktualizacji.
 
 ## 3. Wykrywanie rozbieżności między plikami
 
