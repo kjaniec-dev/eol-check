@@ -93,7 +93,10 @@ describe('matching', () => {
       note: 'No lifecycle data on endoflife.date',
       cycle: null,
       eolFrom: null,
-      component: { label: `typescript ${range}`, version, source: 'package.json' },
+      component: {
+        label: `typescript ${range}`, version, source: 'package.json',
+        versionBasis: range.startsWith('^') || range.startsWith('~') ? 'minimum' : 'declared',
+      },
     });
   });
 

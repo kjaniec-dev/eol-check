@@ -5,8 +5,10 @@ import {
 } from '@kjaniec-dev/ui';
 import data from '../data/eol.json';
 import { check, sortFindings } from '../lib/match.ts';
+import { findingsToMarkdown } from '../lib/markdown.ts';
 import { parseAny } from '../lib/parsers/index.ts';
 import type { Dataset, Status } from '../lib/types.ts';
+import { versionBasisInfo } from '../lib/version-basis.ts';
 
 const dataset = data as Dataset;
 
@@ -22,11 +24,6 @@ const EXAMPLE = JSON.stringify({
   engines: { node: '18.20.0' },
   dependencies: { react: '19.0.0', typescript: '^5.0.0' },
 }, null, 2);
-
-function markdownCell(value: string | null | undefined) {
-  return (value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/\|/g, '&#124;').replace(/[\r\n]+/g, ' ');
-}
 
 export default function Checker() {
   const [pasted, setPasted] = useState('');
@@ -57,11 +54,7 @@ export default function Checker() {
   }
 
   async function copyMarkdown() {
-    const lines = ['| Status | Component | Version | Cycle | Support ends | Source | Note |', '|---|---|---|---|---|---|---|'];
-    for (const f of findings) {
-      lines.push(`| ${[LABEL[f.status], f.productLabel ?? f.component.label, f.component.version, f.cycle, f.eolFrom, f.component.source, f.note].map(markdownCell).join(' | ')} |`);
-    }
-    await navigator.clipboard.writeText(lines.join('\n'));
+    await navigator.clipboard.writeText(findingsToMarkdown(findings, LABEL));
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
@@ -168,6 +161,7 @@ export default function Checker() {
                         <TableHead>Status</TableHead>
                         <TableHead>Component</TableHead>
                         <TableHead>Version</TableHead>
+                        <TableHead>Basis</TableHead>
                         <TableHead>Cycle</TableHead>
                         <TableHead>Support ends</TableHead>
                         <TableHead>Source</TableHead>
@@ -175,7 +169,7 @@ export default function Checker() {
                     </TableHeader>
                     <TableBody>
                       {visibleFindings.length === 0 && (
-                        <TableRow><TableCell colSpan={6}>No results for this status. Choose All results to reset the filter.</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={7}>No results for this status. Choose All results to reset the filter.</TableCell></TableRow>
                       )}
                       {visibleFindings.map((f, i) => (
                         <TableRow key={i}>
@@ -185,6 +179,7 @@ export default function Checker() {
                           </TableCell>
                           <TableCell>{f.productLabel ?? f.component.label}</TableCell>
                           <TableCell>{f.component.version ?? '—'}</TableCell>
+                          <TableCell><span title={versionBasisInfo(f.component).explanation}>{versionBasisInfo(f.component).label}</span></TableCell>
                           <TableCell>{f.cycle ?? '—'}</TableCell>
                           <TableCell>{f.eolFrom ?? '—'}</TableCell>
                           <TableCell>{f.component.source}</TableCell>

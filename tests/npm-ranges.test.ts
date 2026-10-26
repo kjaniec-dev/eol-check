@@ -36,5 +36,13 @@ describe('npm version ranges', () => {
     expect(components.map(({ product, version }) => [product, version])).toEqual([
       ['nodejs', '19.0.0'], ['react', '18.0.0'], ['vue', null],
     ]);
+    expect(components.map(({ versionBasis }) => versionBasis)).toEqual(['minimum', 'minimum', 'range']);
+  });
+
+  it('distinguishes an exact declaration from a computed range minimum', () => {
+    const components = parsePackageJson(JSON.stringify({ dependencies: { react: '19.0.0', vue: '^3.5.0' } }));
+    expect(components.map(({ product, version, versionBasis }) => [product, version, versionBasis])).toEqual([
+      ['react', '19.0.0', 'declared'], ['vue', '3.5.0', 'minimum'],
+    ]);
   });
 });

@@ -19,7 +19,7 @@ Najbliższa, niewielka iteracja ułatwiająca zrozumienie raportu.
 
 - [x] Klikalne liczniki filtrujące tabelę według statusu, z możliwością powrotu do wszystkich wyników.
 - [x] Osobny licznik i filtr `Unknown`.
-- [ ] Oznaczenie podstawy wyniku: wersja z lockfile, minimum z deklarowanego zakresu lub cykl wywnioskowany z tagu obrazu.
+- [x] Oznaczenie podstawy wyniku: wersja z lockfile, minimum z deklarowanego zakresu lub cykl wywnioskowany z tagu obrazu.
 - [x] Komunikat „plik rozpoznany, ale brak produktów objętych sprawdzaniem”, aby pusty wynik nie sugerował potwierdzonego wsparcia wszystkich zależności.
 - [x] Usuwanie pojedynczych dodanych plików.
 - [x] Przycisk „Wypróbuj przykład” wczytujący przykładowe dane.

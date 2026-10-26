@@ -9,7 +9,7 @@ describe('Python manifests', () => {
     const result = parseAny('version = 1\nrevision = 3\nrequires-python = ">=3.10,<4"\n[[package]]\nname = "example"\nversion = "9.9.9"');
     expect(result.type).toBe('uv.lock');
     expect(result.components).toEqual([
-      { source: 'uv.lock', kind: 'runtime', label: 'Python >=3.10,<4', product: 'python', version: '3.10' },
+      { source: 'uv.lock', kind: 'runtime', label: 'Python >=3.10,<4', product: 'python', version: '3.10', versionBasis: 'minimum' },
     ]);
   });
 
@@ -22,7 +22,7 @@ describe('Python manifests', () => {
     const text = '[project]\nname = "example"\nrequires-python = ">=3.9,<4"';
     expect(detectFileType(text)).toBe('pyproject.toml');
     expect(versions(text)).toEqual([['python', '3.9']]);
-    expect(parseAny(text).components[0]).toMatchObject({ source: 'pyproject.toml', kind: 'runtime' });
+    expect(parseAny(text).components[0]).toMatchObject({ source: 'pyproject.toml', kind: 'runtime', versionBasis: 'minimum' });
   });
 
   it('parses TOML comments, literal strings and multiline values', () => {

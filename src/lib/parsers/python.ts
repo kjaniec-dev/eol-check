@@ -62,9 +62,10 @@ export function parsePyproject(text: string): Component[] {
   const poetry = table(table(table(doc.tool).poetry).dependencies);
   const range = project['requires-python'] ?? poetry.python;
   if (typeof range !== 'string') return [];
+  const version = minimumPythonVersion(range);
   return [{
     source: 'pyproject.toml', kind: 'runtime', label: `Python ${range.trim()}`,
-    product: 'python', version: minimumPythonVersion(range),
+    product: 'python', version, versionBasis: version === null ? 'range' : 'minimum',
   }];
 }
 
@@ -81,9 +82,10 @@ export function parseUvLock(text: string): Component[] {
     const doc = parse(text);
     const range = doc['requires-python'];
     if (typeof doc.version !== 'number' || typeof range !== 'string') return [];
+    const version = minimumPythonVersion(range);
     return [{
       source: 'uv.lock', kind: 'runtime', label: `Python ${range.trim()}`,
-      product: 'python', version: minimumPythonVersion(range),
+      product: 'python', version, versionBasis: version === null ? 'range' : 'minimum',
     }];
   } catch {
     return [];

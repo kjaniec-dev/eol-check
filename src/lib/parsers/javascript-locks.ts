@@ -35,7 +35,7 @@ function collector(source: string) {
       seen.add(key);
       components.push({
         source, kind: 'framework', label: `${name} ${version ?? 'unknown'}`,
-        product, version,
+        product, version, versionBasis: 'lockfile',
         ...(name === 'typescript' ? { productLabel: 'TypeScript' } : {}),
       });
     },

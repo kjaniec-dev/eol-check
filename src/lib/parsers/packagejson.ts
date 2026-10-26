@@ -3,6 +3,7 @@ import { NODE, NPM_PACKAGES } from '../mapping.ts';
 import Range from 'semver/classes/range.js';
 import semverMinVersion from 'semver/ranges/min-version.js';
 import compare from 'semver/functions/compare.js';
+import valid from 'semver/functions/valid.js';
 
 const SOURCE = 'package.json';
 
@@ -38,7 +39,9 @@ export function parsePackageJson(text: string): Component[] {
 
   const node = pkg.engines?.node;
   if (typeof node === 'string') {
-    out.push({ source: SOURCE, kind: 'runtime', label: `node ${node}`, product: NODE, version: minVersion(node) });
+    const version = minVersion(node);
+    out.push({ source: SOURCE, kind: 'runtime', label: `node ${node}`, product: NODE, version,
+      versionBasis: version === null ? 'range' : valid(node) === version ? 'declared' : 'minimum' });
   }
 
   const deps: Record<string, string> = {
@@ -49,9 +52,11 @@ export function parsePackageJson(text: string): Component[] {
   for (const [name, range] of Object.entries(deps)) {
     const product = NPM_PACKAGES[name];
     if (!Object.hasOwn(NPM_PACKAGES, name) || typeof range !== 'string') continue;
+    const version = minVersion(range);
     out.push({
       source: SOURCE, kind: 'framework', label: `${name} ${range}`,
-      product: product ?? null, version: minVersion(range),
+      product: product ?? null, version,
+      versionBasis: version === null ? 'range' : valid(range) === version ? 'declared' : 'minimum',
       ...(name === 'typescript' ? { productLabel: 'TypeScript' } : {}),
     });
   }
