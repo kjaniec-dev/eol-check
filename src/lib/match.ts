@@ -1,6 +1,8 @@
 import type { Component, Dataset, Finding, Release, Status } from './types.ts';
+import { suggestMigrations } from './migrations.ts';
+import { statusOf } from './status.ts';
 
-export const SOON_DAYS = 180;
+export { SOON_DAYS, statusOf } from './status.ts';
 
 /** Longest release cycle that is a prefix of the version on a segment boundary ("3.11" matches "3.11.4"). */
 export function findRelease(releases: Release[], version: string): Release | null {
@@ -26,15 +28,6 @@ function latestMajorRelease(releases: Release[], major: string): Release | null 
     }
     return best;
   }, null);
-}
-
-export function statusOf(r: Release, today: Date): Status {
-  if (r.isEol) return 'eol';
-  if (!r.eolFrom) return 'ok';
-  const eol = new Date(r.eolFrom + 'T00:00:00Z').getTime();
-  const now = today.getTime();
-  if (eol <= now) return 'eol';
-  return eol - now <= SOON_DAYS * 86_400_000 ? 'soon' : 'ok';
 }
 
 export function check(components: Component[], data: Dataset, today = new Date()): Finding[] {
@@ -78,13 +71,17 @@ export function check(components: Component[], data: Dataset, today = new Date()
         status: 'unknown',
         note: `No release cycle for ${component.version}`,
       };
+    const status = statusOf(release, today);
     return {
       ...base,
       productLabel,
-      status: statusOf(release, today),
+      status,
       cycle: release.name,
       eolFrom: release.eolFrom,
       note,
+      ...(status === 'eol' || status === 'soon'
+        ? { migrationSuggestions: suggestMigrations(product.releases, release.name, today) }
+        : {}),
     };
   });
 }

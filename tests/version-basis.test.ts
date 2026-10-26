@@ -48,12 +48,42 @@ describe('version basis', () => {
     const markdown = findingsToMarkdown([finding], labels);
 
     expect(markdown).toContain(
-      '| Status | Component | Version | Basis | Cycle | Support ends | Source | Note |',
+      '| Status | Component | Version | Basis | Cycle | Support ends | Migration suggestions | Source | Note |',
     );
     expect(markdown).toContain(
       'Resolved from lockfile: Read as a resolved package version from a lockfile',
     );
     expect(markdown).toContain('services/api&#124;lock.json');
     expect(markdown).toContain('No cycle &#124; &lt;known&gt; check');
+  });
+
+  it('exports migration suggestions and their compatibility disclaimer', () => {
+    const markdown = findingsToMarkdown(
+      [
+        {
+          component: {
+            source: 'package.json',
+            kind: 'runtime',
+            label: 'node',
+            product: 'nodejs',
+            version: '18',
+          },
+          status: 'eol',
+          productLabel: 'Node.js',
+          cycle: '18',
+          eolFrom: '2025-04-30',
+          note: null,
+          migrationSuggestions: [
+            { cycle: '22', isLts: true, eolFrom: '2027-04-30', supportDaysRemaining: 453 },
+          ],
+        },
+      ],
+      { eol: 'EOL', soon: 'Soon', ok: 'OK', unknown: 'Unknown' },
+    );
+
+    expect(markdown).toContain('22 (LTS) — support ends 2027-04-30 (453 days remaining)');
+    expect(markdown).toContain(
+      'Suggestions are based on product lifecycle data and do not guarantee application compatibility.',
+    );
   });
 });

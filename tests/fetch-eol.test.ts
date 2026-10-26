@@ -5,7 +5,12 @@ const response = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
 const productResponse = () =>
-  response({ result: { label: 'Node.js', releases: [{ cycle: '22', eol: false, lts: true }] } });
+  response({
+    result: {
+      label: 'Node.js',
+      releases: [{ cycle: '22', eol: false, lts: true, releaseDate: '2024-04-23' }],
+    },
+  });
 
 const resetError = () =>
   Object.assign(new TypeError('fetch failed'), {
@@ -31,7 +36,9 @@ describe('EOL API fetching', () => {
     expect(delays).toEqual([250, 500, 1000]);
     expect(product).toEqual({
       label: 'Node.js',
-      releases: [{ name: '22', isEol: false, eolFrom: null, isLts: true }],
+      releases: [
+        { name: '22', isEol: false, eolFrom: null, isLts: true, releaseDate: '2024-04-23' },
+      ],
     });
   });
 

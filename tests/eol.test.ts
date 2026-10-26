@@ -138,4 +138,15 @@ describe('matching', () => {
       'Unrecognised product',
     ]);
   });
+
+  it('adds migration suggestions only to EOL and soon findings', () => {
+    const components = parseDockerfile('FROM node:18\nFROM node:20\nFROM node:22\nFROM node');
+    const findings = check(components, data, today);
+
+    expect(findings.map(({ status }) => status)).toEqual(['eol', 'soon', 'ok', 'unknown']);
+    expect(findings[0]?.migrationSuggestions?.map(({ cycle }) => cycle)).toEqual(['22']);
+    expect(findings[1]?.migrationSuggestions?.map(({ cycle }) => cycle)).toEqual(['22']);
+    expect(findings[2]?.migrationSuggestions).toBeUndefined();
+    expect(findings[3]?.migrationSuggestions).toBeUndefined();
+  });
 });

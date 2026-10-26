@@ -25,6 +25,14 @@ export interface Release {
   isEol: boolean;
   eolFrom: string | null;
   isLts: boolean;
+  releaseDate?: string | null;
+}
+
+export interface MigrationSuggestion {
+  cycle: string;
+  isLts: boolean;
+  eolFrom: string | null;
+  supportDaysRemaining: number | null;
 }
 
 export interface Product {
@@ -47,4 +55,5 @@ export interface Finding {
   eolFrom: string | null;
   /** Explanation of unknown results or inferred lifecycle cycles. */
   note: string | null;
+  migrationSuggestions?: MigrationSuggestion[];
 }

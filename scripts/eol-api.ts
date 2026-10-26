@@ -32,6 +32,7 @@ function normalizeRelease(release: Record<string, unknown>): Release {
     isEol: typeof release.isEol === 'boolean' ? release.isEol : release.eol === true,
     eolFrom,
     isLts: Boolean(release.isLts ?? release.lts),
+    releaseDate: toDate(release.releaseDate),
   };
 }
 

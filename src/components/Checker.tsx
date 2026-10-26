@@ -17,6 +17,7 @@ import {
 } from '@kjaniec-dev/ui';
 import data from '../data/eol.json';
 import { check, sortFindings } from '../lib/match.ts';
+import { formatMigrationSuggestions, MIGRATION_DISCLAIMER } from '../lib/migrations.ts';
 import { findingsToMarkdown } from '../lib/markdown.ts';
 import { parseAny } from '../lib/parsers/index.ts';
 import type { Dataset, Status } from '../lib/types.ts';
@@ -250,13 +251,14 @@ export default function Checker() {
                         <TableHead>Basis</TableHead>
                         <TableHead>Cycle</TableHead>
                         <TableHead>Support ends</TableHead>
+                        <TableHead>Migration suggestions</TableHead>
                         <TableHead>Source</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {visibleFindings.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={7}>
+                          <TableCell colSpan={8}>
                             No results for this status. Choose All results to reset the filter.
                           </TableCell>
                         </TableRow>
@@ -280,6 +282,11 @@ export default function Checker() {
                           </TableCell>
                           <TableCell>{f.cycle ?? '—'}</TableCell>
                           <TableCell>{f.eolFrom ?? '—'}</TableCell>
+                          <TableCell>
+                            {f.status === 'eol' || f.status === 'soon'
+                              ? formatMigrationSuggestions(f.migrationSuggestions ?? [])
+                              : '—'}
+                          </TableCell>
                           <TableCell>{f.component.source}</TableCell>
                         </TableRow>
                       ))}
@@ -287,6 +294,9 @@ export default function Checker() {
                   </Table>
                 </TableWrap>
               </Card>
+              {findings.some(({ status }) => status === 'eol' || status === 'soon') && (
+                <p className="text-xs text-muted-foreground">{MIGRATION_DISCLAIMER}</p>
+              )}
               <div>
                 <Button variant="secondary" onClick={copyMarkdown}>
                   {copied ? 'Copied' : 'Copy all results as Markdown'}
