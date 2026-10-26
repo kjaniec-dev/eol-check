@@ -37,7 +37,7 @@ generate it automatically before starting Astro.
 
 ### Quality checks
 
-Use Node.js 22.23.4 or newer on the Node.js 22 LTS line and npm 9.6.5 or newer.
+Use Node.js 24.22.1 or newer on the Node.js 24 LTS line and npm 10.9.4 or newer.
 
 ```sh
 npm ci
@@ -100,7 +100,8 @@ Connect `kjaniec-dev/eol-check` to Cloudflare Workers Builds with:
 - Root directory: the repository root
 - Build command: `npm run build`
 - Deploy command: `npx wrangler deploy --config wrangler.jsonc`
-- Node.js: 22 or newer
+- Set the `NODE_VERSION` build variable to `24.22.1` in Workers Builds settings to keep the
+  Cloudflare build aligned with the GitHub workflows.
 
 Commit `wrangler.jsonc`, `package.json` and `package-lock.json` before building. With the checked-in static-assets config, Wrangler deploys `dist/` directly. It must not run framework auto-configuration or `astro add cloudflare`; an SSR adapter is unnecessary.
 
