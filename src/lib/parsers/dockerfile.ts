@@ -29,10 +29,19 @@ function expand(value: string, args: Map<string, string>, unquote = false, depth
   for (let i = 0; i < value.length; i++) {
     const char = value[i]!;
     if (unquote && (char === '"' || char === "'")) {
-      if (!quote) { quote = char; continue; }
-      if (quote === char) { quote = ''; continue; }
+      if (!quote) {
+        quote = char;
+        continue;
+      }
+      if (quote === char) {
+        quote = '';
+        continue;
+      }
     }
-    if (char !== '$' || quote === "'") { result += char; continue; }
+    if (char !== '$' || quote === "'") {
+      result += char;
+      continue;
+    }
 
     if (value[i + 1] !== '{') {
       const name = /^[A-Za-z_][A-Za-z0-9_]*/.exec(value.slice(i + 1))?.[0];
@@ -48,13 +57,16 @@ function expand(value: string, args: Map<string, string>, unquote = false, depth
       if (value[end] === '}' && --nesting === 0) break;
     }
     const original = value.slice(i, end + 1);
-    const expression = /^([A-Za-z_][A-Za-z0-9_]*)(?:(:-|-)([\s\S]*))?$/.exec(value.slice(i + 2, end));
+    const expression = /^([A-Za-z_][A-Za-z0-9_]*)(?:(:-|-)([\s\S]*))?$/.exec(
+      value.slice(i + 2, end),
+    );
     if (end === value.length || !expression) {
       result += original;
     } else {
       const [, name, modifier, fallback] = expression;
       const existing = args.get(name!);
-      const useFallback = modifier && (existing === undefined || (modifier === ':-' && existing === ''));
+      const useFallback =
+        modifier && (existing === undefined || (modifier === ':-' && existing === ''));
       result += useFallback ? expand(fallback!, args, unquote, depth + 1) : (existing ?? original);
     }
     i = end;
@@ -86,13 +98,25 @@ export function parseImageReference(ref: string, source: string, label = ref): C
   let name = normalizeImage(repository);
   const tag = hasTag ? withoutDigest!.slice(colon + 1) : null;
   // Distroless pins runtime and OS cycles in the repository name, not the tag.
-  const distroless = /^gcr\.io\/distroless\/(nodejs(\d+)|python3|java(\d+)|static|base|base-nossl|cc|java-base)-debian(\d+)$/.exec(repository);
+  const distroless =
+    /^gcr\.io\/distroless\/(nodejs(\d+)|python3|java(\d+)|static|base|base-nossl|cc|java-base)-debian(\d+)$/.exec(
+      repository,
+    );
   if (distroless) {
     const [, runtime, node, java, debian] = distroless;
     const out: Component[] = [];
     if (node) out.push({ source, kind: 'image', label, product: 'nodejs', version: node });
-    if (runtime === 'python3') out.push({ source, kind: 'image', label, product: 'python', version: null });
-    if (java) out.push({ source, kind: 'image', label, product: null, productLabel: 'Java', version: java });
+    if (runtime === 'python3')
+      out.push({ source, kind: 'image', label, product: 'python', version: null });
+    if (java)
+      out.push({
+        source,
+        kind: 'image',
+        label,
+        product: null,
+        productLabel: 'Java',
+        version: java,
+      });
     out.push({ source, kind: 'image', label, product: 'debian', version: debian! });
     return out;
   }
@@ -100,9 +124,17 @@ export function parseImageReference(ref: string, source: string, label = ref): C
     const image = repository.slice('cgr.dev/chainguard/'.length);
     name = image === 'go' ? 'golang' : image;
   }
-  const bitnami = /^(?:(?:docker\.io|index\.docker\.io|registry-1\.docker\.io)\/|public\.ecr\.aws\/)?bitnami\/([^/]+)$/.exec(repository);
+  const bitnami =
+    /^(?:(?:docker\.io|index\.docker\.io|registry-1\.docker\.io)\/|public\.ecr\.aws\/)?bitnami\/([^/]+)$/.exec(
+      repository,
+    );
   if (bitnami) {
-    const aliases: Record<string, string> = { postgresql: 'postgres', mongodb: 'mongo', apache: 'httpd', java: 'openjdk' };
+    const aliases: Record<string, string> = {
+      postgresql: 'postgres',
+      mongodb: 'mongo',
+      apache: 'httpd',
+      java: 'openjdk',
+    };
     name = aliases[bitnami[1]!] ?? bitnami[1]!;
   }
   const ecrLibrary = /^public\.ecr\.aws\/docker\/library\/([^/]+)$/.exec(repository);
@@ -110,17 +142,31 @@ export function parseImageReference(ref: string, source: string, label = ref): C
   if (repository === 'public.ecr.aws/amazoncorretto/amazoncorretto') name = 'amazoncorretto';
   const lambda = /^public\.ecr\.aws\/lambda\/(nodejs|python|ruby|java|dotnet)$/.exec(repository);
   if (lambda) {
-    const aliases: Record<string, string> = { nodejs: 'node', java: 'openjdk', dotnet: 'dotnet/runtime' };
+    const aliases: Record<string, string> = {
+      nodejs: 'node',
+      java: 'openjdk',
+      dotnet: 'dotnet/runtime',
+    };
     name = aliases[lambda[1]!] ?? lambda[1]!;
   }
   let version = tag && !/[$ {}]/.test(tag) ? versionFromTag(name, tag) : null;
   if (lambda?.[1] === 'dotnet' && version && /^\d+$/.test(version)) version += '.0';
-  return [{
-    source, kind: 'image', label, product: DOCKER_IMAGES[name] ?? null,
-    version,
-    ...(version && /^\d+$/.test(version) && tag && /^v?\d+(?:-[\w.-]+)?$/.test(tag) && !ref.includes('@')
-      ? { floatingMajorTag: true as const } : {}),
-  }];
+  return [
+    {
+      source,
+      kind: 'image',
+      label,
+      product: DOCKER_IMAGES[name] ?? null,
+      version,
+      ...(version &&
+      /^\d+$/.test(version) &&
+      tag &&
+      /^v?\d+(?:-[\w.-]+)?$/.test(tag) &&
+      !ref.includes('@')
+        ? { floatingMajorTag: true as const }
+        : {}),
+    },
+  ];
 }
 
 export function parseDockerfile(text: string): Component[] {

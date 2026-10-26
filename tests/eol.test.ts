@@ -58,7 +58,9 @@ describe('parsers', () => {
   });
 
   it('keeps Java distributions distinct from unspecified Java images', () => {
-    expect(pick(parseDockerfile('FROM openjdk:17\nFROM eclipse-temurin:17\nFROM amazoncorretto:17'))).toEqual([
+    expect(
+      pick(parseDockerfile('FROM openjdk:17\nFROM eclipse-temurin:17\nFROM amazoncorretto:17')),
+    ).toEqual([
       [null, '17'],
       ['eclipse-temurin', '17'],
       ['amazon-corretto', '17'],
@@ -67,11 +69,19 @@ describe('parsers', () => {
 });
 
 // Synthetic dataset for logic tests only; the site uses the real snapshot from scripts/fetch-eol.ts.
-const rel = (name: string, eolFrom: string | null, isEol = false): Release => ({ name, eolFrom, isEol, isLts: false });
+const rel = (name: string, eolFrom: string | null, isEol = false): Release => ({
+  name,
+  eolFrom,
+  isEol,
+  isLts: false,
+});
 const data: Dataset = {
   generatedAt: '2026-01-01T00:00:00Z',
   products: {
-    nodejs: { label: 'Node.js', releases: [rel('18', '2025-04-30', true), rel('20', '2026-04-30'), rel('22', '2027-04-30')] },
+    nodejs: {
+      label: 'Node.js',
+      releases: [rel('18', '2025-04-30', true), rel('20', '2026-04-30'), rel('22', '2027-04-30')],
+    },
     python: { label: 'Python', releases: [rel('3', null), rel('3.11', '2027-10-31')] },
   },
 };
@@ -94,7 +104,9 @@ describe('matching', () => {
       cycle: null,
       eolFrom: null,
       component: {
-        label: `typescript ${range}`, version, source: 'package.json',
+        label: `typescript ${range}`,
+        version,
+        source: 'package.json',
         versionBasis: range.startsWith('^') || range.startsWith('~') ? 'minimum' : 'declared',
       },
     });

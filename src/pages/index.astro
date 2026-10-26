@@ -5,18 +5,26 @@ import '../styles/global.css';
 
 const generated = data.generatedAt.slice(0, 10);
 const themes = [
-  { value: 'light', label: 'Light theme', icon: 'M16 12a4 4 0 1 1-8 0a4 4 0 0 1 8 0ZM12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42' },
+  {
+    value: 'light',
+    label: 'Light theme',
+    icon: 'M16 12a4 4 0 1 1-8 0a4 4 0 0 1 8 0ZM12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42',
+  },
   { value: 'dark', label: 'Dark theme', icon: 'M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z' },
   { value: 'system', label: 'System theme', icon: 'M3 4h18v13H3ZM8 21h8m-4-4v4' },
 ];
 ---
+
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>EOL Check</title>
-    <meta name="description" content="Check runtime versions, dependency manifests, lockfiles and container images for end of support. Supports Node.js, Python, Java, .NET, PHP, Ruby, Compose and Kubernetes. Runs entirely in your browser." />
+    <meta
+      name="description"
+      content="Check runtime versions, dependency manifests, lockfiles and container images for end of support. Supports Node.js, Python, Java, .NET, PHP, Ruby, Compose and Kubernetes. Runs entirely in your browser."
+    />
     <script is:inline>
       (() => {
         const system = matchMedia('(prefers-color-scheme: dark)');
@@ -42,7 +50,9 @@ const themes = [
           document.querySelectorAll('[data-theme]').forEach((button) => {
             button.addEventListener('click', () => {
               theme = button.dataset.theme;
-              try { localStorage.setItem('eol-check-theme', theme); } catch {
+              try {
+                localStorage.setItem('eol-check-theme', theme);
+              } catch {
                 // Keep the selected theme even when storage is unavailable.
               }
               apply();
@@ -58,7 +68,11 @@ const themes = [
         <div class="flex flex-wrap items-center justify-between gap-4">
           <h1 class="m-0 text-3xl font-bold tracking-tight">EOL Check</h1>
           <div class="flex shrink-0 items-center gap-2">
-            <div role="group" aria-label="Theme" class="flex items-center gap-0.5 rounded-full border border-border bg-muted/60 p-1">
+            <div
+              role="group"
+              aria-label="Theme"
+              class="flex items-center gap-0.5 rounded-full border border-border bg-muted/60 p-1"
+            >
               {themes.map(({ value, label, icon }) => (
                 <button
                   type="button"
@@ -68,7 +82,16 @@ const themes = [
                   title={label}
                   class="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground aria-pressed:bg-background aria-pressed:text-foreground aria-pressed:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                 >
-                  <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <svg
+                    viewBox="0 0 24 24"
+                    class="size-4"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.75"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
                     <path d={icon} />
                   </svg>
                 </button>
@@ -91,24 +114,55 @@ const themes = [
           Everything is parsed in your browser; nothing is uploaded.
         </p>
         <details class="text-sm text-muted-foreground">
-          <summary class="w-fit cursor-pointer rounded-sm underline underline-offset-4 hover:text-foreground">Supported formats</summary>
+          <summary class="w-fit cursor-pointer rounded-sm underline underline-offset-4 hover:text-foreground">
+            Supported formats
+          </summary>
           <ul class="mt-3 grid list-disc gap-x-8 gap-y-2 pl-5 sm:grid-cols-2">
-            <li><strong>JavaScript:</strong> package.json, package-lock.json, npm-shrinkwrap.json, pnpm-lock.yaml, yarn.lock</li>
-            <li><strong>Runtime versions:</strong> .nvmrc, .node-version, .python-version, .ruby-version, .tool-versions, mise.toml, .mise.toml</li>
-            <li><strong>Python:</strong> pyproject.toml, uv.lock, poetry.lock, Pipfile.lock, requirements*.txt / .in</li>
-            <li><strong>Java / Go:</strong> pom.xml, build.gradle, build.gradle.kts, go.mod</li>
-            <li><strong>.NET:</strong> global.json, *.csproj, Directory.Build.props, *.runtimeconfig.json</li>
-            <li><strong>PHP / Ruby:</strong> composer.json, composer.lock, Gemfile.lock</li>
-            <li><strong>Containers:</strong> Dockerfile, Compose and Kubernetes YAML / JSON</li>
+            <li>
+              <strong>JavaScript:</strong> package.json, package-lock.json, npm-shrinkwrap.json,
+              pnpm-lock.yaml, yarn.lock
+            </li>
+            <li>
+              <strong>Runtime versions:</strong> .nvmrc, .node-version, .python-version,
+              .ruby-version, .tool-versions, mise.toml, .mise.toml
+            </li>
+            <li>
+              <strong>Python:</strong> pyproject.toml, uv.lock, poetry.lock, Pipfile.lock,
+              requirements*.txt / .in
+            </li>
+            <li>
+              <strong>Java / Go:</strong> pom.xml, build.gradle, build.gradle.kts, go.mod
+            </li>
+            <li>
+              <strong>.NET:</strong> global.json, *.csproj, Directory.Build.props,
+              *.runtimeconfig.json
+            </li>
+            <li>
+              <strong>PHP / Ruby:</strong> composer.json, composer.lock, Gemfile.lock
+            </li>
+            <li>
+              <strong>Containers:</strong> Dockerfile, Compose and Kubernetes YAML / JSON
+            </li>
           </ul>
-          <p class="mt-3">Upload version files with their original names, or select the tool when pasting a plain version number.</p>
+          <p class="mt-3">
+            Upload version files with their original names, or select the tool when pasting a plain
+            version number.
+          </p>
         </details>
       </header>
       <Checker client:load />
       <footer class="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
-        <p class="m-0">Data: <a class="underline hover:text-foreground" href="https://endoflife.date">endoflife.date</a>, snapshot from {generated}.</p>
+        <p class="m-0">
+          Data:{' '}
+          <a class="underline hover:text-foreground" href="https://endoflife.date">
+            endoflife.date
+          </a>
+          , snapshot from {generated}.
+        </p>
         <nav aria-label="Project links" class="flex items-center gap-4">
-          <a class="underline hover:text-foreground" href="https://kjaniec.dev">kjaniec.dev</a>
+          <a class="underline hover:text-foreground" href="https://kjaniec.dev">
+            kjaniec.dev
+          </a>
         </nav>
       </footer>
     </main>

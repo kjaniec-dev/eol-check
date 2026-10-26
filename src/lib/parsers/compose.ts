@@ -22,7 +22,8 @@ export function isCompose(text: string): boolean {
 
 export function parseCompose(text: string): Component[] {
   return Object.values(services(text) ?? {}).flatMap((service) => {
-    if (!isMapping(service) || typeof service.image !== 'string' || !service.image.trim()) return [];
+    if (!isMapping(service) || typeof service.image !== 'string' || !service.image.trim())
+      return [];
     return parseImageReference(service.image.trim(), 'compose.yaml');
   });
 }

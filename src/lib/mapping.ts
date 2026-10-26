@@ -56,14 +56,16 @@ export const ECOSYSTEM_PRODUCTS = ['django', 'php', 'laravel', 'symfony', 'ruby-
 
 export function allProductSlugs(): string[] {
   return [
-    ...new Set([
-      ...Object.values(DOCKER_IMAGES),
-      ...Object.values(NPM_PACKAGES),
-      NODE,
-      GO,
-      JAVA,
-      SPRING_BOOT,
-      ...ECOSYSTEM_PRODUCTS,
-    ].filter((slug): slug is string => slug !== null)),
+    ...new Set(
+      [
+        ...Object.values(DOCKER_IMAGES),
+        ...Object.values(NPM_PACKAGES),
+        NODE,
+        GO,
+        JAVA,
+        SPRING_BOOT,
+        ...ECOSYSTEM_PRODUCTS,
+      ].filter((slug): slug is string => slug !== null),
+    ),
   ];
 }

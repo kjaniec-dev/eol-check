@@ -16,8 +16,9 @@ export function minVersion(range: string): string | null {
       // Ignore impossible OR branches, but do not invent 0.0.0 for an unbounded one.
       const candidate = semverMinVersion(comparators.map((c) => c.value).join(' '));
       if (!candidate) continue;
-      const hasLowerBound = comparators.some((c) =>
-        c.operator === '>=' || c.operator === '>' || (c.operator === '' && c.value !== ''));
+      const hasLowerBound = comparators.some(
+        (c) => c.operator === '>=' || c.operator === '>' || (c.operator === '' && c.value !== ''),
+      );
       if (!hasLowerBound) return null;
       if (!minimum || compare(candidate, minimum) < 0) minimum = candidate;
     }
@@ -45,8 +46,14 @@ export function parsePackageJson(text: string): Component[] {
   const node = pkg.engines?.node;
   if (typeof node === 'string') {
     const version = minVersion(node);
-    out.push({ source: SOURCE, kind: 'runtime', label: `node ${node}`, product: NODE, version,
-      versionBasis: version === null ? 'range' : valid(node) === version ? 'declared' : 'minimum' });
+    out.push({
+      source: SOURCE,
+      kind: 'runtime',
+      label: `node ${node}`,
+      product: NODE,
+      version,
+      versionBasis: version === null ? 'range' : valid(node) === version ? 'declared' : 'minimum',
+    });
   }
 
   const deps: Record<string, unknown> = {
@@ -59,8 +66,11 @@ export function parsePackageJson(text: string): Component[] {
     if (!Object.hasOwn(NPM_PACKAGES, name) || typeof range !== 'string') continue;
     const version = minVersion(range);
     out.push({
-      source: SOURCE, kind: 'framework', label: `${name} ${range}`,
-      product: product ?? null, version,
+      source: SOURCE,
+      kind: 'framework',
+      label: `${name} ${range}`,
+      product: product ?? null,
+      version,
       versionBasis: version === null ? 'range' : valid(range) === version ? 'declared' : 'minimum',
       ...(name === 'typescript' ? { productLabel: 'TypeScript' } : {}),
     });
