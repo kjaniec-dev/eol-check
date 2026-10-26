@@ -24,7 +24,9 @@ const themes = [
         try {
           const saved = localStorage.getItem('eol-check-theme');
           if (['light', 'dark', 'system'].includes(saved)) theme = saved;
-        } catch {}
+        } catch {
+          // Storage may be unavailable; keep the system theme.
+        }
         function apply() {
           const dark = theme === 'dark' || (theme === 'system' && system.matches);
           document.documentElement.classList.toggle('dark', dark);
@@ -40,7 +42,9 @@ const themes = [
           document.querySelectorAll('[data-theme]').forEach((button) => {
             button.addEventListener('click', () => {
               theme = button.dataset.theme;
-              try { localStorage.setItem('eol-check-theme', theme); } catch {}
+              try { localStorage.setItem('eol-check-theme', theme); } catch {
+                // Keep the selected theme even when storage is unavailable.
+              }
               apply();
             });
           });

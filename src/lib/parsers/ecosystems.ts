@@ -206,9 +206,9 @@ export function parseGemfileLock(text: string): Component[] {
       continue;
     }
     if (['GEM', 'GIT', 'PATH'].includes(section)) {
-      if (/^  specs:\s*$/.test(line)) { specs = true; continue; }
-      if (/^  \S/.test(line)) specs = false;
-      const rails = specs ? /^    rails \(([^\s()]+)\)\s*$/.exec(line) : null;
+      if (/^ {2}specs:\s*$/.test(line)) { specs = true; continue; }
+      if (/^ {2}\S/.test(line)) specs = false;
+      const rails = specs ? /^ {4}rails \(([^\s()]+)\)\s*$/.exec(line) : null;
       if (rails && exactVersion(rails[1])) out.push(component(source, 'rails', rails[1]!, 'ruby-on-rails', rails[1]!, 'lockfile'));
     } else if (section === 'RUBY VERSION') {
       const ruby = /^\s+ruby (\d+\.\d+\.\d+)(?:p\d+)?(?:\s+\([^\r\n]*\))?\s*$/.exec(line);

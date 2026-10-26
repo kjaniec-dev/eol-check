@@ -28,7 +28,12 @@ export function minVersion(range: string): string | null {
 }
 
 export function parsePackageJson(text: string): Component[] {
-  let pkg: Record<string, any>;
+  let pkg: {
+    engines?: { node?: unknown };
+    dependencies?: Record<string, unknown>;
+    devDependencies?: Record<string, unknown>;
+    peerDependencies?: Record<string, unknown>;
+  } | null;
   try {
     pkg = JSON.parse(text);
   } catch {
@@ -44,7 +49,7 @@ export function parsePackageJson(text: string): Component[] {
       versionBasis: version === null ? 'range' : valid(node) === version ? 'declared' : 'minimum' });
   }
 
-  const deps: Record<string, string> = {
+  const deps: Record<string, unknown> = {
     ...pkg.dependencies,
     ...pkg.devDependencies,
     ...pkg.peerDependencies,

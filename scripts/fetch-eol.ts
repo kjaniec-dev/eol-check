@@ -10,7 +10,7 @@ function toDate(v: unknown): string | null {
   return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : null;
 }
 
-function normalizeRelease(r: any): Release {
+function normalizeRelease(r: Record<string, unknown>): Release {
   // v1 uses isEol/eolFrom; tolerate the older `eol` (date | boolean) field as well.
   const eolFrom = toDate(r.eolFrom ?? r.eol);
   return {
@@ -25,7 +25,11 @@ async function fetchProduct(slug: string): Promise<Product | null> {
   const res = await fetch(`${API}/${slug}/`, { headers: { accept: 'application/json' } });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`${slug}: HTTP ${res.status}`);
-  const body: any = await res.json();
+  const body: {
+    result?: { label?: unknown; releases?: Record<string, unknown>[] };
+    label?: unknown;
+    releases?: Record<string, unknown>[];
+  } = await res.json();
   const p = body.result ?? body;
   return { label: String(p.label ?? slug), releases: (p.releases ?? []).map(normalizeRelease) };
 }

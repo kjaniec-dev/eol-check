@@ -35,21 +35,48 @@ npm test
 Run `npm run fetch-data` to refresh the snapshot manually. Both `npm run dev` and `npm run build`
 generate it automatically before starting Astro.
 
+### Quality checks
+
+Use Node.js 22.22.3 or newer on the Node.js 22 LTS line and npm 9.6.5 or newer.
+
+```sh
+npm ci
+npm run quality       # lint, formatting, tests, full build and Astro/TypeScript checks
+npm run lint          # ESLint: JavaScript, TypeScript, React Hooks and Astro
+npm run format:check  # check formatting without modifying files
+npm run format        # apply Prettier formatting (including Astro)
+```
+
+The quality workflow runs on every pull request, pushes to `main` and manual dispatch.
+It uses read-only repository permissions, no deployment secrets and no deployment steps.
+The full build refreshes the EOL snapshot and requires access to endoflife.date.
+Generated data, build outputs, dependencies and local tool directories are excluded from formatting.
+The existing deployment workflow remains separate.
+
+### Dependency updates
+
+`renovate.json` configures Renovate for npm dependencies and GitHub Actions using the recommended
+preset. Non-major npm updates are grouped; major updates remain separate. Automatic merging is
+disabled so updates can be reviewed after the quality checks pass.
+
+Enable the [Renovate GitHub App](https://github.com/apps/renovate) for this repository to activate
+updates; committing the configuration alone does not install or authorize the app.
+
 To support more software, add entries to `src/lib/mapping.ts` (and a parser if it needs a new file type).
 
 ## Supported inputs
 
-| Ecosystem | Files | Checked products |
-| --- | --- | --- |
-| Runtime pins | `.nvmrc`, `.node-version`, `.python-version`, `.ruby-version`, `.tool-versions`, `mise.toml`, `.mise.toml` | Node.js, Python, Ruby, Go, .NET; Java remains unknown without a JDK distribution |
-| JavaScript | `package.json`, `package-lock.json` / `npm-shrinkwrap.json`, `pnpm-lock.yaml`, `yarn.lock` | Mapped frameworks; Node.js from `package.json` engines |
-| Python | `pyproject.toml`, `uv.lock`, `poetry.lock`, `Pipfile.lock`, `requirements*.txt` / `.in` | Django; Python runtime from `pyproject.toml`, `uv.lock` or `.python-version` |
-| .NET | `global.json`, `*.csproj`, `Directory.Build.props`, `*.runtimeconfig.json` | .NET SDK/runtime release families and target frameworks |
-| Java | `pom.xml`, `build.gradle`, `build.gradle.kts` | Java declarations and Spring Boot; Gradle toolchain vendors identify Temurin/Corretto |
-| Go | `go.mod` | Go runtime |
-| PHP | `composer.json`, `composer.lock` | PHP, Laravel, Symfony core components |
-| Ruby | `Gemfile.lock`, `.ruby-version` | Ruby and Rails |
-| Containers | `Dockerfile`, Compose, Kubernetes YAML/JSON | Mapped image products, including Distroless, Chainguard, Bitnami and selected AWS Public ECR namespaces |
+| Ecosystem    | Files                                                                                                      | Checked products                                                                                        |
+| ------------ | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Runtime pins | `.nvmrc`, `.node-version`, `.python-version`, `.ruby-version`, `.tool-versions`, `mise.toml`, `.mise.toml` | Node.js, Python, Ruby, Go, .NET; Java remains unknown without a JDK distribution                        |
+| JavaScript   | `package.json`, `package-lock.json` / `npm-shrinkwrap.json`, `pnpm-lock.yaml`, `yarn.lock`                 | Mapped frameworks; Node.js from `package.json` engines                                                  |
+| Python       | `pyproject.toml`, `uv.lock`, `poetry.lock`, `Pipfile.lock`, `requirements*.txt` / `.in`                    | Django; Python runtime from `pyproject.toml`, `uv.lock` or `.python-version`                            |
+| .NET         | `global.json`, `*.csproj`, `Directory.Build.props`, `*.runtimeconfig.json`                                 | .NET SDK/runtime release families and target frameworks                                                 |
+| Java         | `pom.xml`, `build.gradle`, `build.gradle.kts`                                                              | Java declarations and Spring Boot; Gradle toolchain vendors identify Temurin/Corretto                   |
+| Go           | `go.mod`                                                                                                   | Go runtime                                                                                              |
+| PHP          | `composer.json`, `composer.lock`                                                                           | PHP, Laravel, Symfony core components                                                                   |
+| Ruby         | `Gemfile.lock`, `.ruby-version`                                                                            | Ruby and Rails                                                                                          |
+| Containers   | `Dockerfile`, Compose, Kubernetes YAML/JSON                                                                | Mapped image products, including Distroless, Chainguard, Bitnami and selected AWS Public ECR namespaces |
 
 Uploaded filenames disambiguate plain version pins. When pasting a scalar version, use the tool selector; automatic detection retains the existing numeric `.python-version` behavior. Structured manifests are detected by content. Uploaded filenames appear in the Source column.
 

@@ -15,7 +15,7 @@ export function parseGradle(text: string, source = 'build.gradle'): Component[] 
   const compatibility = /\bsourceCompatibility(?:[ \t]*=[ \t]*|[ \t]*\([ \t]*|[ \t]+)([^;\r\n}]+)/.exec(clean);
   if (toolchain || compatibility) {
     const declared = (toolchain?.[1] ?? compatibility![1]!).trim();
-    let version: string | null = null;
+    let version: string | null;
     if (toolchain) version = /^\d+$/.test(declared) ? declared : null;
     else {
       const literal = /^(?:JavaVersion\.VERSION_(\d+(?:_\d+)*)|(['"])(\d+(?:\.\d+)*)\2)\s*\)?\s*$/.exec(declared);
