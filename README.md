@@ -59,6 +59,12 @@ The existing deployment workflow remains separate.
 preset. Non-major npm updates are grouped; major updates remain separate. Automatic merging is
 disabled so updates can be reviewed after the quality checks pass.
 
+Direct npm dependencies and the `undici` override use exact versions, without `^` or `~`.
+The project `.npmrc` enables `save-exact`, and Renovate preserves pinned versions. Updates target
+the npm `latest` tag, except TypeScript, which stays on the latest 6.x release.
+`@types/node` follows `latest` (currently 26), while the runtime remains Node.js 24; types alone
+do not guarantee that newer Node.js APIs are available at runtime.
+
 Enable the [Renovate GitHub App](https://github.com/apps/renovate) for this repository to activate
 updates; committing the configuration alone does not install or authorize the app.
 

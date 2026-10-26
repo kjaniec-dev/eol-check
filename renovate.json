@@ -6,6 +6,15 @@
   "packageRules": [
     {
       "matchManagers": ["npm"],
+      "rangeStrategy": "pin"
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": ">=6.0.0 <7.0.0"
+    },
+    {
+      "matchManagers": ["npm"],
       "matchUpdateTypes": ["minor", "patch"],
       "groupName": "non-major npm dependencies"
     }
