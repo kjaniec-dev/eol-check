@@ -7,10 +7,10 @@
   "routes": [
     {
       "pattern": "eol-check.kjaniec.dev",
-      "custom_domain": true
-    }
+      "custom_domain": true,
+    },
   ],
   "assets": {
-    "directory": "./dist"
-  }
+    "directory": "./dist",
+  },
 }

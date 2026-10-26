@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.astro/
+.wrangler/
+.worktrees/
+.idea/
+.serena/
+.junie/
+.playwright-cli/
+src/data/eol.json
+package-lock.json

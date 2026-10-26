@@ -34,8 +34,12 @@ function collector(source: string) {
       if (seen.has(key)) return;
       seen.add(key);
       components.push({
-        source, kind: 'framework', label: `${name} ${version ?? 'unknown'}`,
-        product, version, versionBasis: 'lockfile',
+        source,
+        kind: 'framework',
+        label: `${name} ${version ?? 'unknown'}`,
+        product,
+        version,
+        versionBasis: 'lockfile',
         ...(name === 'typescript' ? { productLabel: 'TypeScript' } : {}),
       });
     },
@@ -50,7 +54,8 @@ export function parsePackageLock(text: string): Component[] {
     for (const [path, entry] of Object.entries(doc.packages)) {
       // The last node_modules segment identifies nested and scoped packages.
       const name = path.match(/(?:^|\/)node_modules\/((?:@[^/]+\/)?[^/]+)$/)?.[1];
-      if (name && isMapping(entry)) out.add(typeof entry.name === 'string' ? entry.name : name, entry.version);
+      if (name && isMapping(entry))
+        out.add(typeof entry.name === 'string' ? entry.name : name, entry.version);
     }
   } else {
     const pending = isMapping(doc.dependencies) ? Object.entries(doc.dependencies).reverse() : [];
@@ -104,7 +109,8 @@ export function parseYarnLock(text: string): Component[] {
   if (!/^ {2}version\s+[^:\s]/m.test(text)) {
     for (const [selectors, entry] of Object.entries(read(text))) {
       if (selectors === '__metadata' || !isMapping(entry)) continue;
-      const resolvedName = typeof entry.resolution === 'string' ? descriptorName(entry.resolution) : null;
+      const resolvedName =
+        typeof entry.resolution === 'string' ? descriptorName(entry.resolution) : null;
       const names = resolvedName ? [resolvedName] : selectorNames(selectors);
       for (const name of names) out.add(name, entry.version);
     }
@@ -123,7 +129,9 @@ export function parseYarnLock(text: string): Component[] {
       names = line.endsWith(':') ? selectorNames(line.slice(0, -1)) : [];
       version = undefined;
     } else {
-      const match = line.match(/^ {2}version\s+(?:"([^"\r\n]*)"|'([^'\r\n]*)'|([^\s#]+))\s*(?:#.*)?$/);
+      const match = line.match(
+        /^ {2}version\s+(?:"([^"\r\n]*)"|'([^'\r\n]*)'|([^\s#]+))\s*(?:#.*)?$/,
+      );
       if (match) version = match[1] ?? match[2] ?? match[3];
     }
   }

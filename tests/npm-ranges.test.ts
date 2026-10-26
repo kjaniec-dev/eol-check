@@ -23,26 +23,48 @@ describe('npm version ranges', () => {
     expect(minVersion(range)).toBe(expected);
   });
 
-  it.each(['<5', '<=5', '<5 || >=6', '*', 'latest', '>=5 <4', 'github:org/repo#v5', 'file:../v5', 'nonsense5'])
-    ('does not invent a minimum for %s', (range) => {
-      expect(minVersion(range)).toBeNull();
-    });
+  it.each([
+    '<5',
+    '<=5',
+    '<5 || >=6',
+    '*',
+    'latest',
+    '>=5 <4',
+    'github:org/repo#v5',
+    'file:../v5',
+    'nonsense5',
+  ])('does not invent a minimum for %s', (range) => {
+    expect(minVersion(range)).toBeNull();
+  });
 
   it('applies range interpretation to Node engines and framework dependencies', () => {
-    const components = parsePackageJson(JSON.stringify({
-      engines: { node: '>18' },
-      dependencies: { react: '<19 >=18', vue: '<3' },
-    }));
+    const components = parsePackageJson(
+      JSON.stringify({
+        engines: { node: '>18' },
+        dependencies: { react: '<19 >=18', vue: '<3' },
+      }),
+    );
     expect(components.map(({ product, version }) => [product, version])).toEqual([
-      ['nodejs', '19.0.0'], ['react', '18.0.0'], ['vue', null],
+      ['nodejs', '19.0.0'],
+      ['react', '18.0.0'],
+      ['vue', null],
     ]);
-    expect(components.map(({ versionBasis }) => versionBasis)).toEqual(['minimum', 'minimum', 'range']);
+    expect(components.map(({ versionBasis }) => versionBasis)).toEqual([
+      'minimum',
+      'minimum',
+      'range',
+    ]);
   });
 
   it('distinguishes an exact declaration from a computed range minimum', () => {
-    const components = parsePackageJson(JSON.stringify({ dependencies: { react: '19.0.0', vue: '^3.5.0' } }));
-    expect(components.map(({ product, version, versionBasis }) => [product, version, versionBasis])).toEqual([
-      ['react', '19.0.0', 'declared'], ['vue', '3.5.0', 'minimum'],
+    const components = parsePackageJson(
+      JSON.stringify({ dependencies: { react: '19.0.0', vue: '^3.5.0' } }),
+    );
+    expect(
+      components.map(({ product, version, versionBasis }) => [product, version, versionBasis]),
+    ).toEqual([
+      ['react', '19.0.0', 'declared'],
+      ['vue', '3.5.0', 'minimum'],
     ]);
   });
 });

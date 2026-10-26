@@ -12,8 +12,11 @@ function documents(text: string): Mapping[] {
     return parseAllDocuments(text, { merge: true, stringKeys: true }).flatMap((doc) => {
       if (doc.errors.length) return [];
       const value: unknown = doc.toJS({ maxAliasCount: 100 });
-      return mapping(value) && typeof value.apiVersion === 'string' && typeof value.kind === 'string'
-        ? [value] : [];
+      return mapping(value) &&
+        typeof value.apiVersion === 'string' &&
+        typeof value.kind === 'string'
+        ? [value]
+        : [];
     });
   } catch {
     return [];
@@ -33,7 +36,8 @@ export function parseKubernetes(text: string, source = 'Kubernetes'): Component[
     const kind = typeof doc.kind === 'string' ? doc.kind : inheritedKind;
     if (kind && (kind === 'List' || kind.endsWith('List'))) {
       const itemKind = kind === 'List' ? undefined : kind.slice(0, -4);
-      if (Array.isArray(doc.items)) doc.items.filter(mapping).forEach((item) => visit(item, itemKind));
+      if (Array.isArray(doc.items))
+        doc.items.filter(mapping).forEach((item) => visit(item, itemKind));
       return;
     }
     let spec = mapping(doc.spec) ? doc.spec : {};
@@ -41,7 +45,17 @@ export function parseKubernetes(text: string, source = 'Kubernetes'): Component[
       const job = mapping(spec.jobTemplate) ? spec.jobTemplate : {};
       spec = mapping(job.spec) ? job.spec : {};
     }
-    if (['Deployment', 'StatefulSet', 'DaemonSet', 'ReplicaSet', 'ReplicationController', 'Job', 'CronJob'].includes(String(kind))) {
+    if (
+      [
+        'Deployment',
+        'StatefulSet',
+        'DaemonSet',
+        'ReplicaSet',
+        'ReplicationController',
+        'Job',
+        'CronJob',
+      ].includes(String(kind))
+    ) {
       const template = mapping(spec.template) ? spec.template : {};
       spec = mapping(template.spec) ? template.spec : {};
     } else if (kind !== 'Pod') return;

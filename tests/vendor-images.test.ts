@@ -20,8 +20,12 @@ describe('vendor container images', () => {
   });
 
   it('extracts Node and Debian versions from the supplied digest-pinned Distroless image', () => {
-    const ref = 'gcr.io/distroless/nodejs24-debian13:nonroot@sha256:9eeb7f5887d0e239e78264b06f7f11d2e14be534050481803a9e4728fcdd278e';
-    expect(versions(ref)).toEqual([['nodejs', '24'], ['debian', '13']]);
+    const ref =
+      'gcr.io/distroless/nodejs24-debian13:nonroot@sha256:9eeb7f5887d0e239e78264b06f7f11d2e14be534050481803a9e4728fcdd278e';
+    expect(versions(ref)).toEqual([
+      ['nodejs', '24'],
+      ['debian', '13'],
+    ]);
     expect(components(ref).every((c) => c.label === ref && c.source === 'Dockerfile')).toBe(true);
     expect(parseAny(`services:\n  app:\n    image: ${ref}`).components).toEqual([
       { source: 'compose.yaml', kind: 'image', label: ref, product: 'nodejs', version: '24' },
@@ -29,9 +33,15 @@ describe('vendor container images', () => {
     ]);
   });
 
-  it.each(['latest', 'debug-nonroot', 'nonroot-arm64', '999'])('uses name versions rather than the Distroless tag %s', (tag) => {
-    expect(versions(`gcr.io/distroless/nodejs22-debian12:${tag}`)).toEqual([['nodejs', '22'], ['debian', '12']]);
-  });
+  it.each(['latest', 'debug-nonroot', 'nonroot-arm64', '999'])(
+    'uses name versions rather than the Distroless tag %s',
+    (tag) => {
+      expect(versions(`gcr.io/distroless/nodejs22-debian12:${tag}`)).toEqual([
+        ['nodejs', '22'],
+        ['debian', '12'],
+      ]);
+    },
+  );
 
   it('checks Debian-only Distroless images, including digest-only references', () => {
     for (const name of ['static', 'base', 'base-nossl', 'cc', 'java-base']) {
@@ -40,7 +50,10 @@ describe('vendor container images', () => {
   });
 
   it('recognises Python without inventing a minor version from the Debian version', () => {
-    expect(versions('gcr.io/distroless/python3-debian13:nonroot')).toEqual([['python', null], ['debian', '13']]);
+    expect(versions('gcr.io/distroless/python3-debian13:nonroot')).toEqual([
+      ['python', null],
+      ['debian', '13'],
+    ]);
   });
 
   it('keeps generic Java separate from vendor-specific Java lifecycle data', () => {

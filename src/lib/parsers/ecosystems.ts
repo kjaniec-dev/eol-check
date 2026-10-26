@@ -8,7 +8,8 @@ export { ECOSYSTEM_PRODUCTS };
 
 function table(value: unknown): Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown> : {};
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
 function array(value: unknown): unknown[] {
@@ -27,14 +28,30 @@ function unique(items: Component[]): Component[] {
 
 /** Locked versions remain verbatim, including v prefixes and prerelease syntax. */
 function exactVersion(value: unknown): string | null {
-  return typeof value === 'string' && /^v?\d+(?:\.\d+)*(?:(?:[-+._][\da-zA-Z][\da-zA-Z.+_-]*)|(?:(?:a|b|rc|post|dev)\d+(?:\.[a-z0-9]+)*))?$/.test(value)
-    ? value : null;
+  return typeof value === 'string' &&
+    /^v?\d+(?:\.\d+)*(?:(?:[-+._][\da-zA-Z][\da-zA-Z.+_-]*)|(?:(?:a|b|rc|post|dev)\d+(?:\.[a-z0-9]+)*))?$/.test(
+      value,
+    )
+    ? value
+    : null;
 }
 
-function component(source: string, name: string, range: string, product: string, version: string | null,
-  versionBasis: Component['versionBasis'] = version === null ? 'range' : 'declared'): Component {
-  return { source, kind: product === 'php' || product === 'ruby' ? 'runtime' : 'framework',
-    label: `${name}${range ? ` ${range}` : ''}`, product, version, versionBasis };
+function component(
+  source: string,
+  name: string,
+  range: string,
+  product: string,
+  version: string | null,
+  versionBasis: Component['versionBasis'] = version === null ? 'range' : 'declared',
+): Component {
+  return {
+    source,
+    kind: product === 'php' || product === 'ruby' ? 'runtime' : 'framework',
+    label: `${name}${range ? ` ${range}` : ''}`,
+    product,
+    version,
+    versionBasis,
+  };
 }
 
 function exactPythonDeclaration(range: string): boolean {
@@ -45,7 +62,9 @@ function exactPythonDeclaration(range: string): boolean {
 /** PEP 440 numeric lower bounds; unsupported/excluded bounds stay unknown. */
 function pythonMinimum(range: string, poetry = false): string | null {
   const value = range.trim();
-  const exact = /^(?:===?)?(v?\d+(?:\.\d+)*(?:[a-zA-Z][\da-zA-Z.]*|[.+-][\da-zA-Z.+-]+)?)$/.exec(value);
+  const exact = /^(?:===?)?(v?\d+(?:\.\d+)*(?:[a-zA-Z][\da-zA-Z.]*|[.+-][\da-zA-Z.+-]+)?)$/.exec(
+    value,
+  );
   if (exact) return exactVersion(exact[1]);
   if (!value || value === '*') return null;
   const converted: string[] = [];
@@ -76,13 +95,21 @@ export function parsePythonDependencies(text: string, source: string): Component
     if (name.toLowerCase().replace(/[-_.]+/g, '-') !== 'django') return;
     const version = locked ? exactVersion(range.replace(/^==/, '')) : pythonMinimum(range, poetry);
     if (locked && version === null) return;
-    const versionBasis = locked ? 'lockfile' : version === null ? 'range'
-      : exactPythonDeclaration(range) ? 'declared' : 'minimum';
+    const versionBasis = locked
+      ? 'lockfile'
+      : version === null
+        ? 'range'
+        : exactPythonDeclaration(range)
+          ? 'declared'
+          : 'minimum';
     out.push(component(source, name, range, 'django', version, versionBasis));
   };
   const requirement = (value: unknown) => {
     if (typeof value !== 'string') return;
-    const line = value.replace(/\s+#.*$/, '').split(';', 1)[0]!.trim();
+    const line = value
+      .replace(/\s+#.*$/, '')
+      .split(';', 1)[0]!
+      .trim();
     // Match the whole package name, never URLs, options or arbitrary mentions of Django.
     const match = /^([a-zA-Z0-9][a-zA-Z0-9._-]*)(?:\[[a-zA-Z0-9_,. -]+\])?\s*(.*)$/.exec(line);
     if (!match) return;
@@ -116,25 +143,35 @@ export function parsePythonDependencies(text: string, source: string): Component
       if (filename === 'pyproject.toml') {
         const project = table(doc.project);
         array(project.dependencies).forEach(requirement);
-        Object.values(table(project['optional-dependencies'])).forEach((group) => array(group).forEach(requirement));
+        Object.values(table(project['optional-dependencies'])).forEach((group) =>
+          array(group).forEach(requirement),
+        );
         // All groups are visited, so include-group objects need no recursive expansion.
-        Object.values(table(doc['dependency-groups'])).forEach((group) => array(group).forEach(requirement));
+        Object.values(table(doc['dependency-groups'])).forEach((group) =>
+          array(group).forEach(requirement),
+        );
         const poetry = table(table(doc.tool).poetry);
         poetryDependencies(poetry.dependencies);
-        Object.values(table(poetry.group)).forEach((group) => poetryDependencies(table(group).dependencies));
+        Object.values(table(poetry.group)).forEach((group) =>
+          poetryDependencies(table(group).dependencies),
+        );
         poetryDependencies(poetry['dev-dependencies']);
       } else {
         for (const entry of array(doc.package)) {
           const pkg = table(entry);
-          if (typeof pkg.name === 'string' && typeof pkg.version === 'string') add(pkg.name, pkg.version, true);
+          if (typeof pkg.name === 'string' && typeof pkg.version === 'string')
+            add(pkg.name, pkg.version, true);
         }
       }
     } else if (/\.txt$|\.in$/.test(filename)) {
       // pip continuation lines are joined; marker expressions are intentionally not evaluated.
-      text.replace(/\\\r?\n/g, ' ').split(/\r?\n/).forEach((line) => {
-        // Strip only complete pip-supported hash tokens; other options stay rejected.
-        requirement(line.replace(/\s+--hash=(?:sha256|sha384|sha512):[a-f0-9]+(?=\s|$)/gi, ''));
-      });
+      text
+        .replace(/\\\r?\n/g, ' ')
+        .split(/\r?\n/)
+        .forEach((line) => {
+          // Strip only complete pip-supported hash tokens; other options stay rejected.
+          requirement(line.replace(/\s+--hash=(?:sha256|sha384|sha512):[a-f0-9]+(?=\s|$)/gi, ''));
+        });
     }
   } catch {
     return [];
@@ -160,18 +197,34 @@ function composerProduct(name: string): string | null {
 
 export function parseComposer(text: string, source: string): Component[] {
   let doc: Record<string, unknown>;
-  try { doc = table(JSON.parse(text)); } catch { return []; }
+  try {
+    doc = table(JSON.parse(text));
+  } catch {
+    return [];
+  }
   const out: Component[] = [];
   const add = (name: string, value: unknown, locked = false) => {
     const product = composerProduct(name);
     if (!product || typeof value !== 'string') return;
     // Branch aliases are unresolved even when their numeric prefix matches a release cycle.
     const unresolved = /\bdev\b|(?:^|\.)[x*](?:$|[.-])/i.test(value);
-    const version = locked ? (unresolved ? null : exactVersion(value)) : minVersion(value.replace(/,/g, ' '));
-    const versionBasis = locked && name !== 'php' ? 'lockfile' : version === null ? 'range'
-      : exactVersion(value) ? 'declared' : 'minimum';
+    const version = locked
+      ? unresolved
+        ? null
+        : exactVersion(value)
+      : minVersion(value.replace(/,/g, ' '));
+    const versionBasis =
+      locked && name !== 'php'
+        ? 'lockfile'
+        : version === null
+          ? 'range'
+          : exactVersion(value)
+            ? 'declared'
+            : 'minimum';
     // Composer tags commonly start with v; lifecycle cycles use numeric prefixes.
-    out.push(component(source, name, value, product, version?.replace(/^v/, '') ?? null, versionBasis));
+    out.push(
+      component(source, name, value, product, version?.replace(/^v/, '') ?? null, versionBasis),
+    );
   };
   const filename = source.split(/[\\/]/).pop()!.toLowerCase();
   if (filename === 'composer.lock') {
@@ -206,10 +259,14 @@ export function parseGemfileLock(text: string): Component[] {
       continue;
     }
     if (['GEM', 'GIT', 'PATH'].includes(section)) {
-      if (/^  specs:\s*$/.test(line)) { specs = true; continue; }
-      if (/^  \S/.test(line)) specs = false;
-      const rails = specs ? /^    rails \(([^\s()]+)\)\s*$/.exec(line) : null;
-      if (rails && exactVersion(rails[1])) out.push(component(source, 'rails', rails[1]!, 'ruby-on-rails', rails[1]!, 'lockfile'));
+      if (/^ {2}specs:\s*$/.test(line)) {
+        specs = true;
+        continue;
+      }
+      if (/^ {2}\S/.test(line)) specs = false;
+      const rails = specs ? /^ {4}rails \(([^\s()]+)\)\s*$/.exec(line) : null;
+      if (rails && exactVersion(rails[1]))
+        out.push(component(source, 'rails', rails[1]!, 'ruby-on-rails', rails[1]!, 'lockfile'));
     } else if (section === 'RUBY VERSION') {
       const ruby = /^\s+ruby (\d+\.\d+\.\d+)(?:p\d+)?(?:\s+\([^\r\n]*\))?\s*$/.exec(line);
       if (ruby) out.push(component(source, 'ruby', ruby[1]!, 'ruby', ruby[1]!, 'lockfile'));

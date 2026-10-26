@@ -39,23 +39,53 @@ export function statusOf(r: Release, today: Date): Status {
 
 export function check(components: Component[], data: Dataset, today = new Date()): Finding[] {
   return components.map((component): Finding => {
-    const base = { component, productLabel: component.productLabel ?? null, cycle: null, eolFrom: null, note: null };
-    if (!component.product) return {
-      ...base, status: 'unknown',
-      note: component.productLabel ? 'No lifecycle data on endoflife.date' : 'Unrecognised product',
+    const base = {
+      component,
+      productLabel: component.productLabel ?? null,
+      cycle: null,
+      eolFrom: null,
+      note: null,
     };
+    if (!component.product)
+      return {
+        ...base,
+        status: 'unknown',
+        note: component.productLabel
+          ? 'No lifecycle data on endoflife.date'
+          : 'Unrecognised product',
+      };
     const product = data.products[component.product];
     if (!product) return { ...base, status: 'unknown', note: 'No data for this product' };
     const productLabel = product.label;
-    if (!component.version) return { ...base, productLabel, status: 'unknown', note: 'Version not pinned' };
+    if (!component.version)
+      return { ...base, productLabel, status: 'unknown', note: 'Version not pinned' };
     let release = findRelease(product.releases, component.version);
     let note: string | null = null;
-    if (!release && component.kind === 'image' && component.floatingMajorTag && /^\d+$/.test(component.version)) {
+    if (
+      !release &&
+      component.kind === 'image' &&
+      component.floatingMajorTag &&
+      /^\d+$/.test(component.version)
+    ) {
       release = latestMajorRelease(product.releases, component.version);
-      if (release) note = `Floating major tag: assumes latest known cycle ${release.name}. The deployed image may be older.`;
+      if (release)
+        note = `Floating major tag: assumes latest known cycle ${release.name}. The deployed image may be older.`;
     }
-    if (!release) return { ...base, productLabel, status: 'unknown', note: `No release cycle for ${component.version}` };
-    return { ...base, productLabel, status: statusOf(release, today), cycle: release.name, eolFrom: release.eolFrom, note };
+    if (!release)
+      return {
+        ...base,
+        productLabel,
+        status: 'unknown',
+        note: `No release cycle for ${component.version}`,
+      };
+    return {
+      ...base,
+      productLabel,
+      status: statusOf(release, today),
+      cycle: release.name,
+      eolFrom: release.eolFrom,
+      note,
+    };
   });
 }
 
