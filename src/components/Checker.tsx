@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Badge,
@@ -16,6 +16,7 @@ import {
   Textarea,
 } from '@kjaniec-dev/ui';
 import data from '../data/eol.json';
+import { findDiscrepancies } from '../lib/discrepancies.ts';
 import { check, sortFindings } from '../lib/match.ts';
 import { formatMigrationSuggestions, MIGRATION_DISCLAIMER } from '../lib/migrations.ts';
 import { findingsToMarkdown } from '../lib/markdown.ts';
@@ -24,6 +25,21 @@ import type { Dataset, Status } from '../lib/types.ts';
 import { versionBasisInfo } from '../lib/version-basis.ts';
 
 const dataset = data as Dataset;
+
+interface SelectedFile {
+  id: number;
+  name: string;
+  source: string;
+  text: string;
+  application: string;
+  environment: string;
+}
+
+function applicationForPath(path: string): string {
+  const normalized = path.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+  const separator = normalized.lastIndexOf('/');
+  return separator > 0 ? normalized.slice(0, separator) : 'root';
+}
 
 const LABEL: Record<Status, string> = {
   eol: 'End of life',
@@ -50,28 +66,56 @@ const EXAMPLE = JSON.stringify(
 export default function Checker() {
   const [pasted, setPasted] = useState('');
   const [pastedType, setPastedType] = useState('');
-  const [files, setFiles] = useState<{ name: string; text: string }[]>([]);
+  const [pastedApplication, setPastedApplication] = useState('root');
+  const [pastedEnvironment, setPastedEnvironment] = useState('default');
+  const [files, setFiles] = useState<SelectedFile[]>([]);
   const [copied, setCopied] = useState(false);
   const [statusFilter, setStatusFilter] = useState<Status | null>(null);
+  const nextFileId = useRef(0);
 
-  const { findings, unrecognised, emptySources } = useMemo(() => {
+  const { findings, discrepancies, unrecognised, emptySources } = useMemo(() => {
     const parsed = [
-      ...files.map((f) => ({ ...parseAny(f.text, f.name), source: f.name })),
+      ...files.map((f) => {
+        const result = parseAny(f.text, f.source);
+        return {
+          ...result,
+          source: f.source,
+          components: result.components.map((component) => ({
+            ...component,
+            source: f.source,
+            inputId: `file-${f.id}`,
+            application: f.application.trim() || 'root',
+            environment: f.environment.trim() || 'default',
+          })),
+        };
+      }),
       ...(pasted.trim()
-        ? [{ ...parseAny(pasted, pastedType || undefined), source: 'Pasted input' }]
+        ? [
+            (() => {
+              const result = parseAny(pasted, pastedType || undefined);
+              return {
+                ...result,
+                source: 'Pasted input',
+                components: result.components.map((component) => ({
+                  ...component,
+                  source: 'Pasted input',
+                  inputId: 'pasted-input',
+                  application: pastedApplication.trim() || 'root',
+                  environment: pastedEnvironment.trim() || 'default',
+                })),
+              };
+            })(),
+          ]
         : []),
     ];
+    const components = parsed.flatMap((p) => p.components);
     return {
-      findings: sortFindings(
-        check(
-          parsed.flatMap((p) => p.components),
-          dataset,
-        ),
-      ),
+      findings: sortFindings(check(components, dataset)),
+      discrepancies: findDiscrepancies(components),
       unrecognised: parsed.filter((p) => !p.type).length,
       emptySources: parsed.filter((p) => p.type && p.components.length === 0).map((p) => p.source),
     };
-  }, [pasted, pastedType, files]);
+  }, [pasted, pastedType, pastedApplication, pastedEnvironment, files]);
 
   const count = (s: Status) => findings.filter((f) => f.status === s).length;
   const hasInput = files.length > 0 || pasted.trim() !== '';
@@ -81,13 +125,23 @@ export default function Checker() {
 
   async function onFiles(picked: File[]) {
     const read = await Promise.all(
-      picked.map(async (f) => ({ name: f.name, text: await f.text() })),
+      picked.map(async (f) => {
+        const source = f.webkitRelativePath || f.name;
+        return {
+          id: nextFileId.current++,
+          name: f.name,
+          source,
+          text: await f.text(),
+          application: applicationForPath(source),
+          environment: 'default',
+        };
+      }),
     );
     setFiles((prev) => [...prev, ...read]);
   }
 
   async function copyMarkdown() {
-    await navigator.clipboard.writeText(findingsToMarkdown(findings, LABEL));
+    await navigator.clipboard.writeText(findingsToMarkdown(findings, LABEL, discrepancies));
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
@@ -108,6 +162,26 @@ export default function Checker() {
           <option value=".ruby-version">Ruby (.ruby-version)</option>
         </select>
       </label>
+      <div className="flex flex-wrap gap-3 text-sm">
+        <label className="flex items-center gap-2">
+          Application
+          <input
+            aria-label="Application for pasted input"
+            className="w-40 rounded-md border border-border bg-background px-2 py-1 text-foreground"
+            value={pastedApplication}
+            onChange={(event) => setPastedApplication(event.target.value)}
+          />
+        </label>
+        <label className="flex items-center gap-2">
+          Environment
+          <input
+            aria-label="Environment for pasted input"
+            className="w-40 rounded-md border border-border bg-background px-2 py-1 text-foreground"
+            value={pastedEnvironment}
+            onChange={(event) => setPastedEnvironment(event.target.value)}
+          />
+        </label>
+      </div>
       <div>
         <Button
           variant="secondary"
@@ -140,32 +214,11 @@ export default function Checker() {
               {files.map((f, i) => (
                 <li
                   key={`${f.name}-${i}`}
-                  className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-md border border-border bg-muted/40 py-1 pl-2.5 pr-1"
+                  className="flex min-w-0 max-w-full flex-col gap-2 rounded-md border border-border bg-muted/40 p-2"
                 >
-                  <svg
-                    className="size-4 shrink-0 text-muted-foreground"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={1.75}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M8 13h8M8 17h5" />
-                  </svg>
-                  <span className="truncate" title={f.name}>
-                    {f.name}
-                  </span>
-                  <button
-                    type="button"
-                    aria-label={`Remove ${f.name}, file ${i + 1}`}
-                    title={`Remove ${f.name}`}
-                    className="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-background hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    onClick={() => setFiles((prev) => prev.filter((_, index) => index !== i))}
-                  >
+                  <div className="flex min-w-0 items-center gap-2">
                     <svg
-                      className="size-3.5"
+                      className="size-4 shrink-0 text-muted-foreground"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -174,9 +227,68 @@ export default function Checker() {
                       strokeLinejoin="round"
                       aria-hidden="true"
                     >
-                      <path d="m6 6 12 12M6 18 18 6" />
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M8 13h8M8 17h5" />
                     </svg>
-                  </button>
+                    <span className="min-w-0 flex-1 truncate" title={f.source}>
+                      {f.source}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${f.name}, file ${i + 1}`}
+                      title={`Remove ${f.name}`}
+                      className="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-background hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      onClick={() => setFiles((prev) => prev.filter((file) => file.id !== f.id))}
+                    >
+                      <svg
+                        className="size-3.5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1.75}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="m6 6 12 12M6 18 18 6" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <label className="flex min-w-0 flex-col gap-1">
+                      Application
+                      <input
+                        aria-label={`Application for ${f.source}`}
+                        className="min-w-0 rounded-md border border-border bg-background px-2 py-1 text-foreground"
+                        value={f.application}
+                        onChange={(event) =>
+                          setFiles((prev) =>
+                            prev.map((file) =>
+                              file.id === f.id
+                                ? { ...file, application: event.target.value }
+                                : file,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                    <label className="flex min-w-0 flex-col gap-1">
+                      Environment
+                      <input
+                        aria-label={`Environment for ${f.source}`}
+                        className="min-w-0 rounded-md border border-border bg-background px-2 py-1 text-foreground"
+                        value={f.environment}
+                        onChange={(event) =>
+                          setFiles((prev) =>
+                            prev.map((file) =>
+                              file.id === f.id
+                                ? { ...file, environment: event.target.value }
+                                : file,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -240,6 +352,57 @@ export default function Checker() {
                   {statusFilter ? ` · ${LABEL[statusFilter]}` : ''}
                 </p>
               </div>
+              {discrepancies.length > 0 && (
+                <section
+                  aria-label="Cross-file version comparisons"
+                  className="flex flex-col gap-3"
+                >
+                  <h2 className="text-lg font-semibold">Cross-file version comparisons</h2>
+                  <Card>
+                    <TableWrap>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Product</TableHead>
+                            <TableHead>Application</TableHead>
+                            <TableHead>Environment</TableHead>
+                            <TableHead>File A</TableHead>
+                            <TableHead>Declaration A</TableHead>
+                            <TableHead>File B</TableHead>
+                            <TableHead>Declaration B</TableHead>
+                            <TableHead>Result</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {discrepancies.map((discrepancy, index) => (
+                            <TableRow
+                              key={`${discrepancy.left.inputId}-${discrepancy.right.inputId}-${index}`}
+                            >
+                              <TableCell>{discrepancy.productLabel}</TableCell>
+                              <TableCell>{discrepancy.application}</TableCell>
+                              <TableCell>{discrepancy.environment}</TableCell>
+                              <TableCell>{discrepancy.left.source}</TableCell>
+                              <TableCell>{discrepancy.left.label}</TableCell>
+                              <TableCell>{discrepancy.right.source}</TableCell>
+                              <TableCell>{discrepancy.right.label}</TableCell>
+                              <TableCell>
+                                <strong className="capitalize">{discrepancy.result}</strong>
+                                <div className="text-xs text-muted-foreground">
+                                  {discrepancy.explanation}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableWrap>
+                  </Card>
+                  <p className="text-xs text-muted-foreground">
+                    Comparisons are based on declarations and do not confirm the versions used at
+                    runtime.
+                  </p>
+                </section>
+              )}
               <Card>
                 <TableWrap>
                   <Table>

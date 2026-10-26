@@ -1,6 +1,7 @@
 export type ComponentKind = 'runtime' | 'framework' | 'image';
 
-export type VersionBasis = 'declared' | 'minimum' | 'range' | 'lockfile' | 'image-reference';
+export type VersionBasis =
+  'declared' | 'minimum' | 'range' | 'lockfile' | 'image-reference' | 'target-framework';
 
 export interface Component {
   /** Which file type produced this entry, e.g. "Dockerfile". */
@@ -16,8 +17,15 @@ export interface Component {
   version: string | null;
   /** Where the version used for this check came from. */
   versionBasis?: VersionBasis;
+  /** Original npm constraint, retained for cross-file compatibility checks. */
+  versionRange?: string;
   /** An un-digested container tag such as :8 or :8-alpine can follow newer minor cycles. */
   floatingMajorTag?: true;
+  /** User-assigned comparison scope; defaults are applied by the checker UI. */
+  application?: string;
+  environment?: string;
+  /** Distinguishes separate uploaded inputs even if their displayed filenames match. */
+  inputId?: string;
 }
 
 export interface Release {
@@ -56,4 +64,17 @@ export interface Finding {
   /** Explanation of unknown results or inferred lifecycle cycles. */
   note: string | null;
   migrationSuggestions?: MigrationSuggestion[];
+}
+
+export type DiscrepancyResult = 'conflict' | 'compatible' | 'unknown';
+
+export interface CrossFileDiscrepancy {
+  product: string;
+  productLabel: string;
+  application: string;
+  environment: string;
+  left: Component;
+  right: Component;
+  result: DiscrepancyResult;
+  explanation: string;
 }

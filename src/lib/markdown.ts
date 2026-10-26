@@ -1,4 +1,4 @@
-import type { Finding, Status } from './types.ts';
+import type { CrossFileDiscrepancy, Finding, Status } from './types.ts';
 import { formatMigrationSuggestions, MIGRATION_DISCLAIMER } from './migrations.ts';
 import { versionBasisInfo } from './version-basis.ts';
 
@@ -11,7 +11,11 @@ function markdownCell(value: string | null | undefined): string {
     .replace(/[\r\n]+/g, ' ');
 }
 
-export function findingsToMarkdown(findings: Finding[], labels: Record<Status, string>): string {
+export function findingsToMarkdown(
+  findings: Finding[],
+  labels: Record<Status, string>,
+  discrepancies: CrossFileDiscrepancy[] = [],
+): string {
   const lines = [
     '| Status | Component | Version | Basis | Cycle | Support ends | Migration suggestions | Source | Note |',
     '|---|---|---|---|---|---|---|---|---|',
@@ -35,6 +39,32 @@ export function findingsToMarkdown(findings: Finding[], labels: Record<Status, s
   }
   if (findings.some(({ status }) => status === 'eol' || status === 'soon')) {
     lines.push('', MIGRATION_DISCLAIMER);
+  }
+  if (discrepancies.length > 0) {
+    lines.push(
+      '',
+      '### Cross-file version comparisons',
+      '',
+      '| Product | Application | Environment | File A | Declaration A | File B | Declaration B | Result |',
+      '|---|---|---|---|---|---|---|---|',
+    );
+    for (const discrepancy of discrepancies) {
+      const values = [
+        discrepancy.productLabel,
+        discrepancy.application,
+        discrepancy.environment,
+        discrepancy.left.source,
+        discrepancy.left.label,
+        discrepancy.right.source,
+        discrepancy.right.label,
+        `${discrepancy.result[0]!.toUpperCase()}${discrepancy.result.slice(1)}: ${discrepancy.explanation}`,
+      ];
+      lines.push(`| ${values.map(markdownCell).join(' | ')} |`);
+    }
+    lines.push(
+      '',
+      'Comparisons are based on declarations and do not confirm the versions used at runtime.',
+    );
   }
   return lines.join('\n');
 }

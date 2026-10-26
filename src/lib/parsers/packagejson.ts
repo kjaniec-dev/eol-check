@@ -53,6 +53,7 @@ export function parsePackageJson(text: string): Component[] {
       product: NODE,
       version,
       versionBasis: version === null ? 'range' : valid(node) === version ? 'declared' : 'minimum',
+      versionRange: node,
     });
   }
 
@@ -72,6 +73,7 @@ export function parsePackageJson(text: string): Component[] {
       product: product ?? null,
       version,
       versionBasis: version === null ? 'range' : valid(range) === version ? 'declared' : 'minimum',
+      versionRange: range,
       ...(name === 'typescript' ? { productLabel: 'TypeScript' } : {}),
     });
   }
