@@ -21,6 +21,8 @@ import { check, sortFindings } from '../lib/match.ts';
 import { formatMigrationSuggestions, MIGRATION_DISCLAIMER } from '../lib/migrations.ts';
 import { findingsToMarkdown } from '../lib/markdown.ts';
 import { parseAny } from '../lib/parsers/index.ts';
+import { PROJECT_SCAN_LIMITS, readProjectFiles } from '../lib/project-files.ts';
+import type { ProjectScanResult } from '../lib/project-files.ts';
 import type { Dataset, Status } from '../lib/types.ts';
 import { versionBasisInfo } from '../lib/version-basis.ts';
 
@@ -31,6 +33,7 @@ interface SelectedFile {
   name: string;
   source: string;
   text: string;
+  size: number;
   application: string;
   environment: string;
 }
@@ -69,9 +72,15 @@ export default function Checker() {
   const [pastedApplication, setPastedApplication] = useState('root');
   const [pastedEnvironment, setPastedEnvironment] = useState('default');
   const [files, setFiles] = useState<SelectedFile[]>([]);
+  const [readingFiles, setReadingFiles] = useState(false);
+  const [scanSummary, setScanSummary] = useState<{
+    projectDirectory: boolean;
+    result: ProjectScanResult;
+  } | null>(null);
   const [copied, setCopied] = useState(false);
   const [statusFilter, setStatusFilter] = useState<Status | null>(null);
   const nextFileId = useRef(0);
+  const readingFilesRef = useRef(false);
 
   const { findings, discrepancies, unrecognised, emptySources } = useMemo(() => {
     const parsed = [
@@ -123,21 +132,37 @@ export default function Checker() {
     ? findings.filter((f) => f.status === statusFilter)
     : findings;
 
-  async function onFiles(picked: File[]) {
-    const read = await Promise.all(
-      picked.map(async (f) => {
-        const source = f.webkitRelativePath || f.name;
-        return {
+  async function readPickedFiles(picked: File[], projectDirectory = false) {
+    if (readingFilesRef.current) return;
+    readingFilesRef.current = true;
+    setReadingFiles(true);
+    try {
+      const result = await readProjectFiles(picked, {
+        projectDirectory,
+        existingFileCount: files.length,
+        existingBytes: files.reduce((total, file) => total + file.size, 0),
+      });
+      setFiles((previous) => [
+        ...previous,
+        ...result.files.map(({ file, source, text, size }) => ({
           id: nextFileId.current++,
-          name: f.name,
+          name: file.name,
           source,
-          text: await f.text(),
+          text,
+          size,
           application: applicationForPath(source),
           environment: 'default',
-        };
-      }),
-    );
-    setFiles((prev) => [...prev, ...read]);
+        })),
+      ]);
+      setScanSummary({ projectDirectory, result });
+    } finally {
+      readingFilesRef.current = false;
+      setReadingFiles(false);
+    }
+  }
+
+  async function onFiles(picked: File[]) {
+    await readPickedFiles(picked);
   }
 
   async function copyMarkdown() {
@@ -204,7 +229,40 @@ export default function Checker() {
           value={pasted}
           onChange={(e) => setPasted(e.target.value)}
         />
-        <Dropzone className="md:flex md:[&>button]:flex-1" onFiles={onFiles} multiple />
+        <div className="flex flex-col gap-3">
+          <label className="inline-flex w-fit cursor-pointer items-center rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
+            <span>{readingFiles ? 'Scanning…' : 'Choose project folder'}</span>
+            <input
+              ref={(element) => element?.setAttribute('webkitdirectory', '')}
+              type="file"
+              multiple
+              disabled={readingFiles}
+              aria-label="Choose project folder"
+              className="sr-only"
+              onChange={(event) => {
+                const picked = Array.from(event.currentTarget.files ?? []);
+                event.currentTarget.value = '';
+                void readPickedFiles(picked, true);
+              }}
+            />
+          </label>
+          <p className="m-0 text-xs text-muted-foreground">
+            Scans supported files locally; up to {PROJECT_SCAN_LIMITS.maxFiles} files,{' '}
+            {PROJECT_SCAN_LIMITS.maxFileBytes / 1024 / 1024} MiB each and{' '}
+            {PROJECT_SCAN_LIMITS.maxTotalBytes / 1024 / 1024} MiB total.
+          </p>
+          <Dropzone className="md:flex md:[&>button]:flex-1" onFiles={onFiles} multiple />
+          {scanSummary && (
+            <p role="status" className="m-0 text-xs text-muted-foreground">
+              {scanSummary.projectDirectory ? 'Folder scan' : 'File upload'}: added{' '}
+              {scanSummary.result.files.length}; ignored {scanSummary.result.ignored}; unsupported{' '}
+              {scanSummary.result.unsupported}; over 5 MiB {scanSummary.result.tooLarge}; over
+              limits {scanSummary.result.overLimit}; read errors {scanSummary.result.failed}.
+              {scanSummary.projectDirectory &&
+                ' The browser lists folder entries before filtering; file contents stay in your browser.'}
+            </p>
+          )}
+        </div>
         {files.length > 0 && (
           <div className="flex min-w-0 flex-wrap items-end gap-x-4 gap-y-2 text-sm md:col-start-2">
             <ul
