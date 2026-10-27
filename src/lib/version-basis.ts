@@ -44,6 +44,12 @@ export function versionBasisInfo(component: Component): VersionBasisInfo {
             label: 'Image reference',
             explanation: 'No runtime version could be inferred from this image reference.',
           };
+    case 'target-framework':
+      return {
+        label: 'Target framework',
+        explanation:
+          'This is a compile-time compatibility target, not a pin of the installed SDK or runtime.',
+      };
     default:
       return component.version
         ? {

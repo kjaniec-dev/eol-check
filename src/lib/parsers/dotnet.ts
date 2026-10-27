@@ -91,6 +91,7 @@ export function parseDotnetXml(text: string, source = 'project.csproj'): Compone
         product: known ? 'dotnet' : null,
         productLabel,
         version,
+        versionBasis: 'target-framework',
       });
     }
   }

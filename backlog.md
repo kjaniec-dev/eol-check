@@ -38,10 +38,10 @@ Pomóc przejść od informacji o EOL do wyboru wersji docelowej.
 
 Przykład: użytkownik dodaje `.nvmrc`, `package.json` i `Dockerfile`, a aplikacja porównuje deklaracje wersji Node.js.
 
-- [ ] Porównywać wersje tego samego produktu w plikach dotyczących tej samej aplikacji.
-- [ ] Wskazywać rozbieżności wraz z nazwami plików i deklaracjami wersji.
-- [ ] Rozróżniać rzeczywisty konflikt od różnych, ale zgodnych deklaracji, np. przypiętej wersji mieszczącej się w zakresie `engines`.
-- [ ] Uwzględnić granice aplikacji i środowisk, aby celowo różne wersje nie były automatycznie traktowane jako błąd.
+- [x] Porównywać wersje tego samego produktu w plikach dotyczących tej samej aplikacji.
+- [x] Wskazywać rozbieżności wraz z nazwami plików i deklaracjami wersji.
+- [x] Rozróżniać rzeczywisty konflikt od różnych, ale zgodnych deklaracji, np. przypiętej wersji mieszczącej się w zakresie `engines`.
+- [x] Uwzględnić granice aplikacji i środowisk, aby celowo różne wersje nie były automatycznie traktowane jako błąd.
 
 ## 4. CLI i GitHub Action
 
