@@ -8,6 +8,7 @@ export const PROJECT_SCAN_LIMITS = {
 
 const IGNORED_DIRECTORIES = new Set([
   '.git',
+  '.worktrees',
   '.astro',
   '.next',
   '.nuxt',

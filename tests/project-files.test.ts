@@ -38,6 +38,32 @@ describe('project folder scanning', () => {
     expect(output.text).not.toHaveBeenCalled();
   });
 
+  it('skips nested worktrees before reading and does not match similar directory names', async () => {
+    const nestedWorktree = file(
+      'apps/web/.worktrees/feature/package.json',
+      '{"engines":{"node":"22"}}',
+    );
+    const windowsWorktree = file('apps\\api\\.WORKTREES\\feature\\.nvmrc', '22');
+    const similarDirectory = file(
+      'apps/web/.worktrees-backup/package.json',
+      '{"engines":{"node":"22"}}',
+    );
+
+    const result = await readProjectFiles([nestedWorktree, windowsWorktree, similarDirectory], {
+      projectDirectory: true,
+      existingFileCount: 199,
+    });
+
+    expect(result.files.map(({ source }) => source)).toEqual([
+      'apps/web/.worktrees-backup/package.json',
+    ]);
+    expect(result.ignored).toBe(2);
+    expect(result.overLimit).toBe(0);
+    expect(nestedWorktree.text).not.toHaveBeenCalled();
+    expect(windowsWorktree.text).not.toHaveBeenCalled();
+    expect(similarDirectory.text).toHaveBeenCalledOnce();
+  });
+
   it('keeps relative paths and filters unrecognised JSON by its contents', async () => {
     const unknown = file('apps/web/settings.json', '{"name":"settings"}');
     const manifest = file(
