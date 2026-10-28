@@ -36,6 +36,7 @@ interface SelectedFile {
   text: string;
   size: number;
   application: string;
+  applicationManuallySet: boolean;
   environment: string;
 }
 
@@ -137,22 +138,34 @@ export default function Checker() {
         existingFileCount: files.length,
         existingBytes: files.reduce((total, file) => total + file.size, 0),
       });
-      const manifestPaths = [
-        ...files.map(({ source }) => source),
-        ...result.files.map(({ source }) => source),
-      ];
-      setFiles((previous) => [
-        ...previous,
-        ...result.files.map(({ file, source, text, size }) => ({
+      setFiles((previous) => {
+        const added = result.files.map(({ file, source, text, size }) => ({
           id: nextFileId.current++,
           name: file.name,
           source,
           text,
           size,
-          application: applicationForPath(source, manifestPaths),
+          application: '',
+          applicationManuallySet: false,
           environment: 'default',
-        })),
-      ]);
+        }));
+        const manifestPaths = [
+          ...previous.map(({ source }) => source),
+          ...added.map(({ source }) => source),
+        ];
+
+        return [
+          ...previous.map((file) =>
+            file.applicationManuallySet
+              ? file
+              : { ...file, application: applicationForPath(file.source, manifestPaths) },
+          ),
+          ...added.map((file) => ({
+            ...file,
+            application: applicationForPath(file.source, manifestPaths),
+          })),
+        ];
+      });
       setScanSummary({ projectDirectory, result });
     } finally {
       readingFilesRef.current = false;
@@ -328,7 +341,11 @@ export default function Checker() {
                           setFiles((prev) =>
                             prev.map((file) =>
                               file.id === f.id
-                                ? { ...file, application: event.target.value }
+                                ? {
+                                    ...file,
+                                    application: event.target.value,
+                                    applicationManuallySet: true,
+                                  }
                                 : file,
                             ),
                           )
@@ -359,7 +376,10 @@ export default function Checker() {
             <button
               type="button"
               disabled={readingFiles}
-              onClick={() => setFiles([])}
+              onClick={() => {
+                setFiles([]);
+                setScanSummary(null);
+              }}
               className="shrink-0 cursor-pointer rounded-sm py-2 text-xs text-muted-foreground underline decoration-border underline-offset-4 transition-colors hover:text-foreground hover:decoration-current focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               Clear all

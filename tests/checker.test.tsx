@@ -116,11 +116,75 @@ describe('Checker file scanning controls', () => {
 
     expect(buttonWithText('Clear all')?.disabled).toBe(false);
     expect(container.querySelector('[data-testid="dropzone"]')).not.toBeNull();
-    expect(existingApplication.value).toBe('manually-set');
+    expect(
+      container.querySelector<HTMLInputElement>(
+        'input[aria-label="Application for apps/api/package.json"]',
+      )?.value,
+    ).toBe('manually-set');
     expect(
       container.querySelector<HTMLInputElement>(
         'input[aria-label="Application for apps/api/docker/Dockerfile"]',
       )?.value,
     ).toBe('apps/api');
+  });
+
+  it('regroups earlier files when a later scan adds their application manifest', async () => {
+    const dockerfile = file('Dockerfile', 'FROM node:18');
+    const manifest = file('package.json', '{"engines":{"node":">=20 <23"}}');
+    readProjectFilesMock
+      .mockResolvedValueOnce(
+        scanResult(dockerfile, 'apps/api/docker/Dockerfile', await dockerfile.text()),
+      )
+      .mockResolvedValueOnce(scanResult(manifest, 'apps/api/package.json', await manifest.text()));
+
+    const folderInput = container.querySelector<HTMLInputElement>(
+      'input[aria-label="Choose project folder"]',
+    )!;
+    await act(async () => {
+      chooseFiles(folderInput, [dockerfile]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(
+      container.querySelector<HTMLInputElement>(
+        'input[aria-label="Application for apps/api/docker/Dockerfile"]',
+      )?.value,
+    ).toBe('apps/api/docker');
+
+    await act(async () => {
+      chooseFiles(folderInput, [manifest]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(
+      container.querySelector<HTMLInputElement>(
+        'input[aria-label="Application for apps/api/docker/Dockerfile"]',
+      )?.value,
+    ).toBe('apps/api');
+    expect(
+      container.querySelector('[aria-label="Cross-file version comparisons"]')?.textContent,
+    ).toContain('conflict');
+  });
+
+  it('clears the scan summary when all files are cleared', async () => {
+    const inputFile = file('package.json', '{"engines":{"node":"22"}}');
+    readProjectFilesMock.mockResolvedValueOnce(
+      scanResult(inputFile, 'apps/api/package.json', await inputFile.text()),
+    );
+
+    const folderInput = container.querySelector<HTMLInputElement>(
+      'input[aria-label="Choose project folder"]',
+    )!;
+    await act(async () => {
+      chooseFiles(folderInput, [inputFile]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(container.textContent).toContain('Folder scan: added 1');
+
+    await act(async () => buttonWithText('Clear all')?.click());
+
+    expect(container.querySelector('[aria-label="Added files"]')).toBeNull();
+    expect(container.textContent).not.toContain('Folder scan: added');
   });
 });
