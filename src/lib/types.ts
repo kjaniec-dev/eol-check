@@ -61,6 +61,8 @@ export interface Finding {
   productLabel: string | null;
   cycle: string | null;
   eolFrom: string | null;
+  /** Whole days until support ends; negative once it has ended, null without a date. */
+  daysRemaining: number | null;
   /** Explanation of unknown results or inferred lifecycle cycles. */
   note: string | null;
   migrationSuggestions?: MigrationSuggestion[];

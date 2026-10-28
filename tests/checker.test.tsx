@@ -299,4 +299,51 @@ describe('Checker file scanning controls', () => {
     expect(container.querySelectorAll('tbody tr').length).toBeGreaterThan(0);
     expect(container.querySelector('tbody')?.textContent).toContain('End of life');
   });
+  it('re-labels the soon filter when the warning threshold changes', async () => {
+    await act(async () => buttonWithText('Try example')?.click());
+    expect(filterButton('Ending within 6 months')).toBeDefined();
+
+    const threshold = container.querySelector<HTMLSelectElement>(
+      'select[aria-label="Warning threshold"]',
+    )!;
+    await act(async () => {
+      threshold.value = '365';
+      threshold.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(filterButton('Ending within 12 months')).toBeDefined();
+    expect(filterButton('Ending within 6 months')).toBeUndefined();
+  });
+
+  it('shows time left and lists what loses support by the planning date', async () => {
+    await act(async () => buttonWithText('Try example')?.click());
+    expect(container.textContent).toContain('Time left');
+    expect(container.querySelector('[aria-label="Support planning"] table')).toBeNull();
+
+    const date = container.querySelector<HTMLInputElement>('input[aria-label="Planning date"]')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+        date,
+        '2999-12-31',
+      );
+      date.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    const planning = container.querySelector('[aria-label="Support planning"]')!;
+    expect(planning.querySelectorAll('tbody tr').length).toBeGreaterThan(0);
+    expect(planning.textContent).toContain('Node.js');
+
+    // A date before Node.js 18 reached end of life must not list it.
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+        date,
+        '2000-01-01',
+      );
+      date.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(planning.textContent).toContain('Nothing loses support on or before 2000-01-01.');
+    expect(planning.querySelector('table')).toBeNull();
+
+    await act(async () => buttonWithText('Clear date')?.click());
+    expect(container.querySelector('[aria-label="Support planning"] table')).toBeNull();
+  });
 });

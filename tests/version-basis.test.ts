@@ -37,6 +37,7 @@ describe('version basis', () => {
       productLabel: 'Django',
       cycle: null,
       eolFrom: null,
+      daysRemaining: null,
       note: 'No cycle | <known>\ncheck',
     };
     const labels: Record<Status, string> = {
@@ -48,7 +49,7 @@ describe('version basis', () => {
     const markdown = findingsToMarkdown([finding], labels);
 
     expect(markdown).toContain(
-      '| Status | Component | Version | Basis | Cycle | Support ends | Migration suggestions | Source | Note |',
+      '| Status | Component | Version | Basis | Cycle | Support ends | Time left | Migration suggestions | Source | Note |',
     );
     expect(markdown).toContain(
       'Resolved from lockfile: Read as a resolved package version from a lockfile',
@@ -72,6 +73,7 @@ describe('version basis', () => {
           productLabel: 'Node.js',
           cycle: '18',
           eolFrom: '2025-04-30',
+          daysRemaining: -277,
           note: null,
           migrationSuggestions: [
             { cycle: '22', isLts: true, eolFrom: '2027-04-30', supportDaysRemaining: 453 },

@@ -85,7 +85,7 @@ const data: Dataset = {
     python: { label: 'Python', releases: [rel('3', null), rel('3.11', '2027-10-31')] },
   },
 };
-const today = new Date('2026-02-01T00:00:00Z');
+const today = new Date(2026, 1, 1);
 
 describe('matching', () => {
   it.each([

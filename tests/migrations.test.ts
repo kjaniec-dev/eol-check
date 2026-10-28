@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { formatMigrationSuggestion, suggestMigrations } from '../src/lib/migrations.ts';
 import type { Release } from '../src/lib/types.ts';
 
-const today = new Date('2026-02-01T00:00:00Z');
+const today = new Date(2026, 1, 1);
 
 const release = (name: string, options: Partial<Omit<Release, 'name'>> = {}): Release => ({
   name,

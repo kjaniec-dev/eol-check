@@ -1,5 +1,6 @@
 import type { CrossFileDiscrepancy, Finding, Status } from './types.ts';
 import { formatMigrationSuggestions, MIGRATION_DISCLAIMER } from './migrations.ts';
+import { formatDaysRemaining } from './planning.ts';
 import { versionBasisInfo } from './version-basis.ts';
 
 function markdownCell(value: string | null | undefined): string {
@@ -17,8 +18,8 @@ export function findingsToMarkdown(
   discrepancies: CrossFileDiscrepancy[] = [],
 ): string {
   const lines = [
-    '| Status | Component | Version | Basis | Cycle | Support ends | Migration suggestions | Source | Note |',
-    '|---|---|---|---|---|---|---|---|---|',
+    '| Status | Component | Version | Basis | Cycle | Support ends | Time left | Migration suggestions | Source | Note |',
+    '|---|---|---|---|---|---|---|---|---|---|',
   ];
   for (const finding of findings) {
     const basis = versionBasisInfo(finding.component);
@@ -29,6 +30,7 @@ export function findingsToMarkdown(
       `${basis.label}: ${basis.explanation}`,
       finding.cycle,
       finding.eolFrom,
+      formatDaysRemaining(finding.daysRemaining),
       finding.status === 'eol' || finding.status === 'soon'
         ? formatMigrationSuggestions(finding.migrationSuggestions ?? [])
         : null,

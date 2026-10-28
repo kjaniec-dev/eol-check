@@ -115,6 +115,7 @@ describe('cross-file discrepancies', () => {
         productLabel: 'Node.js',
         cycle: '22',
         eolFrom: null,
+        daysRemaining: null,
         note: null,
       },
     ];

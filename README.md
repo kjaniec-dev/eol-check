@@ -1,11 +1,13 @@
 # eol-check
 
 Paste or drop a dependency manifest, lockfile, runtime version file or container configuration and see which runtimes, frameworks and base images
-are past end of support (or will be within 6 months). Data comes from [endoflife.date](https://endoflife.date).
+are past end of support (or will be within a warning window of 6 months by default). Data comes from [endoflife.date](https://endoflife.date).
 
 Parsing and matching run in the browser; nothing is uploaded.
 
 Use **Try example** to load a sample manifest. Click a status counter (including **Unknown**) to filter the report; click it again or choose **All results** to reset. Uploaded files can be removed individually. Recognised inputs without checked products show a warning rather than an empty report. **Copy all results as Markdown** exports the complete report, including source filenames, regardless of the active filter.
+
+Use **Warn before end of support** to pick the warning window (30, 90, 180 or 365 days); it decides which releases count as ending soon and which migration targets are considered safe to suggest. The **Time left** column shows whole days until support ends (or how long ago it ended). **Plan by date** lists everything that has already lost support or will on or before a chosen date, such as the end of the quarter. Releases already marked past end of support whose listed end date is missing or later than that status implies are shown separately, since a date cannot place them. Days and quarters are counted on your local calendar date and refresh when the day changes; dates come from endoflife.date and are not adjusted for vendor extended-support contracts.
 
 Use **Choose project folder** to scan supported files in a project and its subdirectories. The scan skips `.git`, `node_modules` and common build-output directories, preserves relative source paths, and processes files locally without uploading their contents. It reads at most 200 files, 5 MiB per file and 20 MiB total, including files already added. The browser may still enumerate the selected folder before these filters and limits are applied, so very large folders can take time to select.
 
@@ -22,7 +24,7 @@ Use **Choose project folder** to scan supported files in a project and its subdi
 - Compose: reads `services.*.image`, including YAML aliases and merge keys. Content detection also accepts `compose.yml`, `docker-compose.yaml` and `docker-compose.yml`. Image tags, registry prefixes, digests and codenames use the same rules as Dockerfile images. Build-only services are skipped; environment interpolation (including defaults and `.env` files) is not resolved, so variable-containing tags remain unknown. Pasted results use the canonical source name `compose.yaml`; uploaded files keep their filenames.
 - Dockerfile: global `ARG` defaults resolve `$VAR` and `${VAR}` in image references, including chained values and fallback expressions. Stage-local `ARG`/`ENV` values do not apply to `FROM`; arguments supplied only at build time remain unknown.
 - Vendor images (Dockerfile and Compose): `gcr.io/distroless/*-debianN` reports the Debian cycle separately from Node.js or Java versions encoded in the image name. `python3` identifies Python but leaves its minor version unknown. Generic Java has no distribution-specific lifecycle data. `cgr.dev/chainguard/` images use supported product names (including `go`) and numeric tags; `latest` and digest-only references do not reveal runtime versions. These are upstream product lifecycle checks, not vendor image support guarantees.
-- `src/lib/match.ts` finds the release cycle, classifies `eol` / `soon` / `ok` / `unknown`, and attaches migration suggestions for EOL or soon-ending releases.
+- `src/lib/match.ts` finds the release cycle, classifies `eol` / `soon` / `ok` / `unknown` using the chosen warning window, records the days remaining, and attaches migration suggestions for EOL or soon-ending releases. `src/lib/planning.ts` selects findings that lose support by a given date.
 - `src/lib/discrepancies.ts` compares declarations for the same product across files in the same application and environment. It reports non-overlapping constraints as conflicts, overlapping but different declarations as compatible, and comparisons without safe semantics as unknown.
 - TypeScript and Java without a known JDK distribution are reported as `unknown`: endoflife.date has no generic lifecycle data for them. Temurin and Corretto images use their distribution-specific data.
 - TypeScript is displayed by name with an explicit lifecycle-data explanation, including when its version is a range such as `^5`. Its unknown status reflects missing support dates, not a failure to parse the version.

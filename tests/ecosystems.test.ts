@@ -285,7 +285,7 @@ describe('Composer', () => {
           },
         },
       },
-      new Date('2026-10-25T00:00:00Z'),
+      new Date(2026, 9, 25),
     );
     expect(findings.map(({ cycle, status }) => [cycle, status])).toEqual([
       ['11', 'eol'],

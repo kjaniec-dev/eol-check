@@ -63,9 +63,9 @@ Większy etap pozwalający regularnie sprawdzać projekt bez ręcznego otwierani
 
 ### Planowanie aktualizacji w czasie
 
-- [ ] Udostępnić wybór progu ostrzegania: 30, 90, 180 lub 365 dni.
-- [ ] Pokazywać liczbę dni pozostałych do EOL.
-- [ ] Dodać widok „co straci wsparcie do wybranej daty”, przydatny przy planowaniu kwartału.
+- [x] Udostępnić wybór progu ostrzegania: 30, 90, 180 lub 365 dni.
+- [x] Pokazywać liczbę dni pozostałych do EOL.
+- [x] Dodać widok „co straci wsparcie do wybranej daty”, przydatny przy planowaniu kwartału.
 
 ### Eksport terminów do kalendarza
 

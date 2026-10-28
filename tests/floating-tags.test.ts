@@ -17,7 +17,7 @@ const data: Dataset = {
     },
   },
 };
-const today = new Date('2026-10-25');
+const today = new Date(2026, 9, 25);
 const findings = (text: string) => check(parseAny(text).components, data, today);
 
 describe('floating container major tags', () => {
