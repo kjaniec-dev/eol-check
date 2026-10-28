@@ -1,7 +1,5 @@
-import { statusOf } from './status.ts';
+import { daysUntil, SOON_DAYS, statusOf } from './status.ts';
 import type { MigrationSuggestion, Release } from './types.ts';
-
-const DAY_MS = 86_400_000;
 
 export const MIGRATION_DISCLAIMER =
   'Suggestions are based on product lifecycle data and do not guarantee application compatibility.';
@@ -20,18 +18,11 @@ function compareCycles(left: number[], right: number[]): number {
   return 0;
 }
 
-function validDate(date: string | null | undefined): number | null {
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
-  const timestamp = Date.parse(`${date}T00:00:00Z`);
-  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === date
-    ? timestamp
-    : null;
-}
-
 export function suggestMigrations(
   releases: Release[],
   currentCycle: string,
   today: Date,
+  soonDays = SOON_DAYS,
 ): MigrationSuggestion[] {
   const current = numericCycle(currentCycle);
   if (!current) return [];
@@ -41,9 +32,8 @@ export function suggestMigrations(
     const candidate = numericCycle(release.name);
     if (!candidate || compareCycles(candidate, current) <= 0) return [];
     if (release.releaseDate && release.releaseDate > todayDate) return [];
-    if (statusOf(release, today) !== 'ok') return [];
+    if (statusOf(release, today, soonDays) !== 'ok') return [];
 
-    const eolTime = validDate(release.eolFrom);
     return [
       {
         release,
@@ -51,8 +41,7 @@ export function suggestMigrations(
           cycle: release.name,
           isLts: release.isLts,
           eolFrom: release.eolFrom,
-          supportDaysRemaining:
-            eolTime === null ? null : Math.ceil((eolTime - today.getTime()) / DAY_MS),
+          supportDaysRemaining: daysUntil(release.eolFrom, today),
         },
       },
     ];

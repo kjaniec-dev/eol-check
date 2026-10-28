@@ -21,13 +21,16 @@ import data from '../data/eol.json';
 import { findDiscrepancies } from '../lib/discrepancies.ts';
 import { check, sortFindings } from '../lib/match.ts';
 import { formatMigrationSuggestions, MIGRATION_DISCLAIMER } from '../lib/migrations.ts';
+import { formatDaysRemaining } from '../lib/planning.ts';
 import { findingsToMarkdown } from '../lib/markdown.ts';
 import { parseAny } from '../lib/parsers/index.ts';
 import { applicationForPath } from '../lib/project-applications.ts';
 import { PROJECT_SCAN_LIMITS, readProjectFiles } from '../lib/project-files.ts';
 import type { ProjectScanResult } from '../lib/project-files.ts';
+import { SOON_DAYS, SOON_DAYS_OPTIONS } from '../lib/status.ts';
 import type { Dataset, Status } from '../lib/types.ts';
 import { versionBasisInfo } from '../lib/version-basis.ts';
+import SupportPlanning from './SupportPlanning.tsx';
 
 const dataset = data as Dataset;
 
@@ -49,12 +52,12 @@ const LABEL: Record<Status, string> = {
   unknown: 'Unknown',
 };
 const VARIANT = { eol: 'danger', soon: 'warning', ok: 'success', unknown: 'neutral' } as const;
-const FILTERS: { status: Status; label: string }[] = [
-  { status: 'eol', label: 'Past end of support' },
-  { status: 'soon', label: 'Ending within 6 months' },
-  { status: 'ok', label: 'Supported' },
-  { status: 'unknown', label: 'Unknown' },
-];
+const SOON_WINDOW: Record<(typeof SOON_DAYS_OPTIONS)[number], string> = {
+  30: '30 days',
+  90: '3 months',
+  180: '6 months',
+  365: '12 months',
+};
 const EXAMPLE = JSON.stringify(
   {
     engines: { node: '18.20.0' },
@@ -77,10 +80,13 @@ export default function Checker() {
   } | null>(null);
   const [copied, setCopied] = useState(false);
   const [statusFilters, setStatusFilters] = useState<Status[]>([]);
+  const [soonDays, setSoonDays] = useState<(typeof SOON_DAYS_OPTIONS)[number]>(SOON_DAYS);
+  const [planningDate, setPlanningDate] = useState('');
   const nextFileId = useRef(0);
   const readingFilesRef = useRef(false);
 
-  const { findings, discrepancies, unrecognised, emptySources } = useMemo(() => {
+  const { findings, discrepancies, unrecognised, emptySources, today } = useMemo(() => {
+    const today = new Date();
     const parsed = [
       ...files.map((f) => {
         const result = parseAny(f.text, f.source);
@@ -117,14 +123,21 @@ export default function Checker() {
     ];
     const components = parsed.flatMap((p) => p.components);
     return {
-      findings: sortFindings(check(components, dataset)),
+      today,
+      findings: sortFindings(check(components, dataset, today, soonDays)),
       discrepancies: findDiscrepancies(components),
       unrecognised: parsed.filter((p) => !p.type).length,
       emptySources: parsed.filter((p) => p.type && p.components.length === 0).map((p) => p.source),
     };
-  }, [pasted, pastedType, pastedApplication, pastedEnvironment, files]);
+  }, [pasted, pastedType, pastedApplication, pastedEnvironment, files, soonDays]);
 
   const count = (s: Status) => findings.filter((f) => f.status === s).length;
+  const filters: { status: Status; label: string }[] = [
+    { status: 'eol', label: 'Past end of support' },
+    { status: 'soon', label: `Ending within ${SOON_WINDOW[soonDays]}` },
+    { status: 'ok', label: 'Supported' },
+    { status: 'unknown', label: 'Unknown' },
+  ];
   const hasInput = files.length > 0 || pasted.trim() !== '';
   const visibleFindings = statusFilters.length
     ? findings.filter((finding) => statusFilters.includes(finding.status))
@@ -221,7 +234,7 @@ export default function Checker() {
           />
         </label>
       </div>
-      <div>
+      <div className="flex flex-wrap items-center gap-3">
         <Button
           variant="primary"
           onClick={() => {
@@ -232,6 +245,23 @@ export default function Checker() {
         >
           Try example
         </Button>
+        <label className="flex items-center gap-2 text-sm">
+          Warn before end of support
+          <Select
+            aria-label="Warning threshold"
+            className="w-fit"
+            value={soonDays}
+            onChange={(event) =>
+              setSoonDays(Number(event.target.value) as (typeof SOON_DAYS_OPTIONS)[number])
+            }
+          >
+            {SOON_DAYS_OPTIONS.map((days) => (
+              <option key={days} value={days}>
+                {days} days
+              </option>
+            ))}
+          </Select>
+        </label>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <Textarea
@@ -414,7 +444,7 @@ export default function Checker() {
                 <ToggleGroup
                   aria-label="Filter by status"
                   className="flex w-fit max-w-full flex-wrap gap-2 [&>button]:flex-none"
-                  options={FILTERS.map(({ status, label }) => ({
+                  options={filters.map(({ status, label }) => ({
                     value: status,
                     label: `${label} (${count(status)})`,
                   }))}
@@ -428,6 +458,14 @@ export default function Checker() {
                     : ''}
                 </p>
               </div>
+              <SupportPlanning
+                findings={findings}
+                today={today}
+                date={planningDate}
+                onDateChange={setPlanningDate}
+                labels={LABEL}
+                variants={VARIANT}
+              />
               {discrepancies.length > 0 && (
                 <section
                   aria-label="Cross-file version comparisons"
@@ -490,6 +528,7 @@ export default function Checker() {
                         <TableHead>Basis</TableHead>
                         <TableHead>Cycle</TableHead>
                         <TableHead>Support ends</TableHead>
+                        <TableHead>Time left</TableHead>
                         <TableHead>Migration suggestions</TableHead>
                         <TableHead>Source</TableHead>
                       </TableRow>
@@ -497,7 +536,7 @@ export default function Checker() {
                     <TableBody>
                       {visibleFindings.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={8}>
+                          <TableCell colSpan={9}>
                             No results for the selected statuses. Clear the selection to show all
                             results.
                           </TableCell>
@@ -522,6 +561,7 @@ export default function Checker() {
                           </TableCell>
                           <TableCell>{f.cycle ?? '—'}</TableCell>
                           <TableCell>{f.eolFrom ?? '—'}</TableCell>
+                          <TableCell>{formatDaysRemaining(f.daysRemaining)}</TableCell>
                           <TableCell>
                             {f.status === 'eol' || f.status === 'soon'
                               ? formatMigrationSuggestions(f.migrationSuggestions ?? [])

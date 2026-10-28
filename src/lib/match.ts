@@ -1,6 +1,6 @@
 import type { Component, Dataset, Finding, Release, Status } from './types.ts';
 import { suggestMigrations } from './migrations.ts';
-import { statusOf } from './status.ts';
+import { daysUntil, SOON_DAYS, statusOf } from './status.ts';
 
 export { SOON_DAYS, statusOf } from './status.ts';
 
@@ -30,13 +30,19 @@ function latestMajorRelease(releases: Release[], major: string): Release | null 
   }, null);
 }
 
-export function check(components: Component[], data: Dataset, today = new Date()): Finding[] {
+export function check(
+  components: Component[],
+  data: Dataset,
+  today = new Date(),
+  soonDays = SOON_DAYS,
+): Finding[] {
   return components.map((component): Finding => {
     const base = {
       component,
       productLabel: component.productLabel ?? null,
       cycle: null,
       eolFrom: null,
+      daysRemaining: null,
       note: null,
     };
     if (!component.product)
@@ -71,16 +77,26 @@ export function check(components: Component[], data: Dataset, today = new Date()
         status: 'unknown',
         note: `No release cycle for ${component.version}`,
       };
-    const status = statusOf(release, today);
+    const status = statusOf(release, today, soonDays);
+    // An `isEol` flag can precede the listed date; days "left" would then be misleading.
+    const days = daysUntil(release.eolFrom, today);
     return {
       ...base,
       productLabel,
       status,
       cycle: release.name,
       eolFrom: release.eolFrom,
+      daysRemaining: status === 'eol' && days !== null && days > 0 ? null : days,
       note,
       ...(status === 'eol' || status === 'soon'
-        ? { migrationSuggestions: suggestMigrations(product.releases, release.name, today) }
+        ? {
+            migrationSuggestions: suggestMigrations(
+              product.releases,
+              release.name,
+              today,
+              soonDays,
+            ),
+          }
         : {}),
     };
   });
