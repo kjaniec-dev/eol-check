@@ -53,6 +53,12 @@ function buttonWithText(text: string): HTMLButtonElement | undefined {
   );
 }
 
+function filterButton(label: string): HTMLButtonElement | undefined {
+  return Array.from(
+    container.querySelector('[aria-label="Filter by status"]')?.querySelectorAll('button') ?? [],
+  ).find((button) => button.textContent?.includes(label));
+}
+
 describe('Checker file scanning controls', () => {
   beforeEach(async () => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -186,5 +192,111 @@ describe('Checker file scanning controls', () => {
 
     expect(container.querySelector('[aria-label="Added files"]')).toBeNull();
     expect(container.textContent).not.toContain('Folder scan: added');
+  });
+
+  it('filters findings by multiple statuses and shows all results when the selection is cleared', async () => {
+    const inputs = [
+      { file: file('eol.json', '{"engines":{"node":"18"}}'), source: 'apps/eol/package.json' },
+      {
+        file: file('supported.json', '{"engines":{"node":"22"}}'),
+        source: 'apps/supported/package.json',
+      },
+      {
+        file: file('unknown.json', '{"engines":{"node":"20"}}'),
+        source: 'apps/unknown/package.json',
+      },
+    ];
+    const scannedFiles = await Promise.all(
+      inputs.map(async ({ file: input, source }) => ({
+        file: input,
+        source,
+        text: await input.text(),
+        size: input.size,
+      })),
+    );
+    readProjectFilesMock.mockResolvedValueOnce({
+      files: scannedFiles,
+      ignored: 0,
+      unsupported: 0,
+      tooLarge: 0,
+      overLimit: 0,
+      failed: 0,
+      read: scannedFiles.length,
+      bytesRead: scannedFiles.reduce((total, scanned) => total + scanned.size, 0),
+    });
+
+    const folderInput = container.querySelector<HTMLInputElement>(
+      'input[aria-label="Choose project folder"]',
+    )!;
+    await act(async () => {
+      chooseFiles(
+        folderInput,
+        inputs.map(({ file: input }) => input),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(3);
+    await act(async () => filterButton('Past end of support')?.click());
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(container.querySelector('tbody')?.textContent).toContain('End of life');
+
+    await act(async () => filterButton('Supported')?.click());
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(2);
+
+    await act(async () => filterButton('Past end of support')?.click());
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(container.querySelector('tbody')?.textContent).toContain('Supported');
+
+    await act(async () => filterButton('Supported')?.click());
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(3);
+    expect(buttonWithText('All results (3)')).toBeUndefined();
+  });
+
+  it('shows an empty state for a zero-count status and restores all results when deselected', async () => {
+    const inputFile = file('package.json', '{"engines":{"node":"22"}}');
+    readProjectFilesMock.mockResolvedValueOnce(
+      scanResult(inputFile, 'apps/api/package.json', await inputFile.text()),
+    );
+
+    const folderInput = container.querySelector<HTMLInputElement>(
+      'input[aria-label="Choose project folder"]',
+    )!;
+    await act(async () => {
+      chooseFiles(folderInput, [inputFile]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    await act(async () => filterButton('Ending within 6 months')?.click());
+    expect(container.querySelector('tbody')?.textContent).toContain(
+      'No results for the selected statuses',
+    );
+
+    await act(async () => filterButton('Ending within 6 months')?.click());
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(container.querySelector('tbody')?.textContent).toContain('Supported');
+  });
+
+  it('resets status filters when Try example is selected', async () => {
+    const inputFile = file('package.json', '{"engines":{"node":"22"}}');
+    readProjectFilesMock.mockResolvedValueOnce(
+      scanResult(inputFile, 'apps/api/package.json', await inputFile.text()),
+    );
+
+    const folderInput = container.querySelector<HTMLInputElement>(
+      'input[aria-label="Choose project folder"]',
+    )!;
+    await act(async () => {
+      chooseFiles(folderInput, [inputFile]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    await act(async () => filterButton('Past end of support')?.click());
+    expect(container.querySelector('tbody')?.textContent).toContain(
+      'No results for the selected statuses',
+    );
+
+    await act(async () => buttonWithText('Try example')?.click());
+    expect(container.querySelectorAll('tbody tr').length).toBeGreaterThan(0);
+    expect(container.querySelector('tbody')?.textContent).toContain('End of life');
   });
 });

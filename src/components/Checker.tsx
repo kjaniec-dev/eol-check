@@ -5,7 +5,9 @@ import {
   Button,
   Card,
   Dropzone,
-  Stat,
+  Input,
+  Select,
+  ToggleGroup,
   Table,
   TableBody,
   TableCell,
@@ -74,7 +76,7 @@ export default function Checker() {
     result: ProjectScanResult;
   } | null>(null);
   const [copied, setCopied] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<Status | null>(null);
+  const [statusFilters, setStatusFilters] = useState<Status[]>([]);
   const nextFileId = useRef(0);
   const readingFilesRef = useRef(false);
 
@@ -124,8 +126,8 @@ export default function Checker() {
 
   const count = (s: Status) => findings.filter((f) => f.status === s).length;
   const hasInput = files.length > 0 || pasted.trim() !== '';
-  const visibleFindings = statusFilter
-    ? findings.filter((f) => f.status === statusFilter)
+  const visibleFindings = statusFilters.length
+    ? findings.filter((finding) => statusFilters.includes(finding.status))
     : findings;
 
   async function readPickedFiles(picked: File[], projectDirectory = false) {
@@ -187,9 +189,9 @@ export default function Checker() {
     <div className="flex flex-col gap-6">
       <label className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
         Pasted version file
-        <select
+        <Select
           aria-label="Pasted version file"
-          className="rounded-md border border-border bg-background px-2 py-1 text-foreground"
+          className="w-fit"
           value={pastedType}
           onChange={(e) => setPastedType(e.target.value)}
         >
@@ -197,23 +199,23 @@ export default function Checker() {
           <option value=".nvmrc">Node.js (.nvmrc / .node-version)</option>
           <option value=".python-version">Python (.python-version)</option>
           <option value=".ruby-version">Ruby (.ruby-version)</option>
-        </select>
+        </Select>
       </label>
       <div className="flex flex-wrap gap-3 text-sm">
         <label className="flex items-center gap-2">
           Application
-          <input
+          <Input
             aria-label="Application for pasted input"
-            className="w-40 rounded-md border border-border bg-background px-2 py-1 text-foreground"
+            className="w-40"
             value={pastedApplication}
             onChange={(event) => setPastedApplication(event.target.value)}
           />
         </label>
         <label className="flex items-center gap-2">
           Environment
-          <input
+          <Input
             aria-label="Environment for pasted input"
-            className="w-40 rounded-md border border-border bg-background px-2 py-1 text-foreground"
+            className="w-40"
             value={pastedEnvironment}
             onChange={(event) => setPastedEnvironment(event.target.value)}
           />
@@ -221,11 +223,11 @@ export default function Checker() {
       </div>
       <div>
         <Button
-          variant="secondary"
+          variant="primary"
           onClick={() => {
             setPasted(EXAMPLE);
             setPastedType('');
-            setStatusFilter(null);
+            setStatusFilters([]);
           }}
         >
           Try example
@@ -242,7 +244,7 @@ export default function Checker() {
           onChange={(e) => setPasted(e.target.value)}
         />
         <div className="flex flex-col gap-3">
-          <label className="inline-flex w-fit cursor-pointer items-center rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
+          <label className="inline-flex w-fit cursor-pointer items-center rounded-kj-md border border-transparent bg-secondary px-3 py-2 text-sm font-semibold leading-none text-secondary-foreground transition-colors hover:bg-secondary-hover focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
             <span>{readingFiles ? 'Scanning…' : 'Choose project folder'}</span>
             <input
               ref={(element) => element?.setAttribute('webkitdirectory', '')}
@@ -268,7 +270,11 @@ export default function Checker() {
               Scanning files… uploads are temporarily unavailable.
             </p>
           ) : (
-            <Dropzone className="md:flex md:[&>button]:flex-1" onFiles={onFiles} multiple />
+            <Dropzone
+              className="md:flex md:flex-1 md:[&>button]:flex-1"
+              onFiles={onFiles}
+              multiple
+            />
           )}
           {scanSummary && (
             <p role="status" className="m-0 text-xs text-muted-foreground">
@@ -333,9 +339,9 @@ export default function Checker() {
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <label className="flex min-w-0 flex-col gap-1">
                       Application
-                      <input
+                      <Input
                         aria-label={`Application for ${f.source}`}
-                        className="min-w-0 rounded-md border border-border bg-background px-2 py-1 text-foreground"
+                        className="min-w-0"
                         value={f.application}
                         onChange={(event) =>
                           setFiles((prev) =>
@@ -354,9 +360,9 @@ export default function Checker() {
                     </label>
                     <label className="flex min-w-0 flex-col gap-1">
                       Environment
-                      <input
+                      <Input
                         aria-label={`Environment for ${f.source}`}
-                        className="min-w-0 rounded-md border border-border bg-background px-2 py-1 text-foreground"
+                        className="min-w-0"
                         value={f.environment}
                         onChange={(event) =>
                           setFiles((prev) =>
@@ -404,37 +410,22 @@ export default function Checker() {
           )}
           {findings.length > 0 && (
             <>
-              <div
-                className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-                role="group"
-                aria-label="Filter by status"
-              >
-                {FILTERS.map(({ status, label }) => (
-                  <button
-                    key={status}
-                    type="button"
-                    aria-pressed={statusFilter === status}
-                    aria-label={`${label}: ${count(status)}`}
-                    className={`rounded-lg text-left cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${statusFilter === status ? 'ring-2 ring-primary' : ''}`}
-                    onClick={() =>
-                      setStatusFilter((current) => (current === status ? null : status))
-                    }
-                  >
-                    <Stat label={label} value={count(status)} />
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <Button
-                  variant="secondary"
-                  aria-pressed={statusFilter === null}
-                  onClick={() => setStatusFilter(null)}
-                >
-                  All results ({findings.length})
-                </Button>
+              <div className="flex flex-col gap-3">
+                <ToggleGroup
+                  aria-label="Filter by status"
+                  className="flex w-fit max-w-full flex-wrap gap-2 [&>button]:flex-none"
+                  options={FILTERS.map(({ status, label }) => ({
+                    value: status,
+                    label: `${label} (${count(status)})`,
+                  }))}
+                  value={statusFilters}
+                  onChange={setStatusFilters}
+                />
                 <p className="text-sm text-muted-foreground">
                   Showing {visibleFindings.length} of {findings.length} results
-                  {statusFilter ? ` · ${LABEL[statusFilter]}` : ''}
+                  {statusFilters.length
+                    ? ` · ${statusFilters.map((status) => LABEL[status]).join(', ')}`
+                    : ''}
                 </p>
               </div>
               {discrepancies.length > 0 && (
@@ -507,7 +498,8 @@ export default function Checker() {
                       {visibleFindings.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={8}>
-                            No results for this status. Choose All results to reset the filter.
+                            No results for the selected statuses. Clear the selection to show all
+                            results.
                           </TableCell>
                         </TableRow>
                       )}
