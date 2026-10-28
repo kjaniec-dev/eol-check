@@ -5,7 +5,9 @@ import {
   Button,
   Card,
   Dropzone,
-  Stat,
+  Input,
+  Select,
+  ToggleGroup,
   Table,
   TableBody,
   TableCell,
@@ -21,6 +23,9 @@ import { check, sortFindings } from '../lib/match.ts';
 import { formatMigrationSuggestions, MIGRATION_DISCLAIMER } from '../lib/migrations.ts';
 import { findingsToMarkdown } from '../lib/markdown.ts';
 import { parseAny } from '../lib/parsers/index.ts';
+import { applicationForPath } from '../lib/project-applications.ts';
+import { PROJECT_SCAN_LIMITS, readProjectFiles } from '../lib/project-files.ts';
+import type { ProjectScanResult } from '../lib/project-files.ts';
 import type { Dataset, Status } from '../lib/types.ts';
 import { versionBasisInfo } from '../lib/version-basis.ts';
 
@@ -31,14 +36,10 @@ interface SelectedFile {
   name: string;
   source: string;
   text: string;
+  size: number;
   application: string;
+  applicationManuallySet: boolean;
   environment: string;
-}
-
-function applicationForPath(path: string): string {
-  const normalized = path.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
-  const separator = normalized.lastIndexOf('/');
-  return separator > 0 ? normalized.slice(0, separator) : 'root';
 }
 
 const LABEL: Record<Status, string> = {
@@ -69,9 +70,15 @@ export default function Checker() {
   const [pastedApplication, setPastedApplication] = useState('root');
   const [pastedEnvironment, setPastedEnvironment] = useState('default');
   const [files, setFiles] = useState<SelectedFile[]>([]);
+  const [readingFiles, setReadingFiles] = useState(false);
+  const [scanSummary, setScanSummary] = useState<{
+    projectDirectory: boolean;
+    result: ProjectScanResult;
+  } | null>(null);
   const [copied, setCopied] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<Status | null>(null);
+  const [statusFilters, setStatusFilters] = useState<Status[]>([]);
   const nextFileId = useRef(0);
+  const readingFilesRef = useRef(false);
 
   const { findings, discrepancies, unrecognised, emptySources } = useMemo(() => {
     const parsed = [
@@ -119,25 +126,57 @@ export default function Checker() {
 
   const count = (s: Status) => findings.filter((f) => f.status === s).length;
   const hasInput = files.length > 0 || pasted.trim() !== '';
-  const visibleFindings = statusFilter
-    ? findings.filter((f) => f.status === statusFilter)
+  const visibleFindings = statusFilters.length
+    ? findings.filter((finding) => statusFilters.includes(finding.status))
     : findings;
 
-  async function onFiles(picked: File[]) {
-    const read = await Promise.all(
-      picked.map(async (f) => {
-        const source = f.webkitRelativePath || f.name;
-        return {
+  async function readPickedFiles(picked: File[], projectDirectory = false) {
+    if (readingFilesRef.current) return;
+    readingFilesRef.current = true;
+    setReadingFiles(true);
+    try {
+      const result = await readProjectFiles(picked, {
+        projectDirectory,
+        existingFileCount: files.length,
+        existingBytes: files.reduce((total, file) => total + file.size, 0),
+      });
+      setFiles((previous) => {
+        const added = result.files.map(({ file, source, text, size }) => ({
           id: nextFileId.current++,
-          name: f.name,
+          name: file.name,
           source,
-          text: await f.text(),
-          application: applicationForPath(source),
+          text,
+          size,
+          application: '',
+          applicationManuallySet: false,
           environment: 'default',
-        };
-      }),
-    );
-    setFiles((prev) => [...prev, ...read]);
+        }));
+        const manifestPaths = [
+          ...previous.map(({ source }) => source),
+          ...added.map(({ source }) => source),
+        ];
+
+        return [
+          ...previous.map((file) =>
+            file.applicationManuallySet
+              ? file
+              : { ...file, application: applicationForPath(file.source, manifestPaths) },
+          ),
+          ...added.map((file) => ({
+            ...file,
+            application: applicationForPath(file.source, manifestPaths),
+          })),
+        ];
+      });
+      setScanSummary({ projectDirectory, result });
+    } finally {
+      readingFilesRef.current = false;
+      setReadingFiles(false);
+    }
+  }
+
+  async function onFiles(picked: File[]) {
+    await readPickedFiles(picked);
   }
 
   async function copyMarkdown() {
@@ -150,9 +189,9 @@ export default function Checker() {
     <div className="flex flex-col gap-6">
       <label className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
         Pasted version file
-        <select
+        <Select
           aria-label="Pasted version file"
-          className="rounded-md border border-border bg-background px-2 py-1 text-foreground"
+          className="w-fit"
           value={pastedType}
           onChange={(e) => setPastedType(e.target.value)}
         >
@@ -160,23 +199,23 @@ export default function Checker() {
           <option value=".nvmrc">Node.js (.nvmrc / .node-version)</option>
           <option value=".python-version">Python (.python-version)</option>
           <option value=".ruby-version">Ruby (.ruby-version)</option>
-        </select>
+        </Select>
       </label>
       <div className="flex flex-wrap gap-3 text-sm">
         <label className="flex items-center gap-2">
           Application
-          <input
+          <Input
             aria-label="Application for pasted input"
-            className="w-40 rounded-md border border-border bg-background px-2 py-1 text-foreground"
+            className="w-40"
             value={pastedApplication}
             onChange={(event) => setPastedApplication(event.target.value)}
           />
         </label>
         <label className="flex items-center gap-2">
           Environment
-          <input
+          <Input
             aria-label="Environment for pasted input"
-            className="w-40 rounded-md border border-border bg-background px-2 py-1 text-foreground"
+            className="w-40"
             value={pastedEnvironment}
             onChange={(event) => setPastedEnvironment(event.target.value)}
           />
@@ -184,11 +223,11 @@ export default function Checker() {
       </div>
       <div>
         <Button
-          variant="secondary"
+          variant="primary"
           onClick={() => {
             setPasted(EXAMPLE);
             setPastedType('');
-            setStatusFilter(null);
+            setStatusFilters([]);
           }}
         >
           Try example
@@ -204,7 +243,50 @@ export default function Checker() {
           value={pasted}
           onChange={(e) => setPasted(e.target.value)}
         />
-        <Dropzone className="md:flex md:[&>button]:flex-1" onFiles={onFiles} multiple />
+        <div className="flex flex-col gap-3">
+          <label className="inline-flex w-fit cursor-pointer items-center rounded-kj-md border border-transparent bg-secondary px-3 py-2 text-sm font-semibold leading-none text-secondary-foreground transition-colors hover:bg-secondary-hover focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
+            <span>{readingFiles ? 'Scanning…' : 'Choose project folder'}</span>
+            <input
+              ref={(element) => element?.setAttribute('webkitdirectory', '')}
+              type="file"
+              multiple
+              disabled={readingFiles}
+              aria-label="Choose project folder"
+              className="sr-only"
+              onChange={(event) => {
+                const picked = Array.from(event.currentTarget.files ?? []);
+                event.currentTarget.value = '';
+                void readPickedFiles(picked, true);
+              }}
+            />
+          </label>
+          <p className="m-0 text-xs text-muted-foreground">
+            Scans supported files locally; up to {PROJECT_SCAN_LIMITS.maxFiles} files,{' '}
+            {PROJECT_SCAN_LIMITS.maxFileBytes / 1024 / 1024} MiB each and{' '}
+            {PROJECT_SCAN_LIMITS.maxTotalBytes / 1024 / 1024} MiB total.
+          </p>
+          {readingFiles ? (
+            <p role="status" className="m-0 text-xs text-muted-foreground">
+              Scanning files… uploads are temporarily unavailable.
+            </p>
+          ) : (
+            <Dropzone
+              className="md:flex md:flex-1 md:[&>button]:flex-1"
+              onFiles={onFiles}
+              multiple
+            />
+          )}
+          {scanSummary && (
+            <p role="status" className="m-0 text-xs text-muted-foreground">
+              {scanSummary.projectDirectory ? 'Folder scan' : 'File upload'}: added{' '}
+              {scanSummary.result.files.length}; ignored {scanSummary.result.ignored}; unsupported{' '}
+              {scanSummary.result.unsupported}; over 5 MiB {scanSummary.result.tooLarge}; over
+              limits {scanSummary.result.overLimit}; read errors {scanSummary.result.failed}.
+              {scanSummary.projectDirectory &&
+                ' The browser lists folder entries before filtering; file contents stay in your browser.'}
+            </p>
+          )}
+        </div>
         {files.length > 0 && (
           <div className="flex min-w-0 flex-wrap items-end gap-x-4 gap-y-2 text-sm md:col-start-2">
             <ul
@@ -234,6 +316,7 @@ export default function Checker() {
                     </span>
                     <button
                       type="button"
+                      disabled={readingFiles}
                       aria-label={`Remove ${f.name}, file ${i + 1}`}
                       title={`Remove ${f.name}`}
                       className="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-background hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -256,15 +339,19 @@ export default function Checker() {
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <label className="flex min-w-0 flex-col gap-1">
                       Application
-                      <input
+                      <Input
                         aria-label={`Application for ${f.source}`}
-                        className="min-w-0 rounded-md border border-border bg-background px-2 py-1 text-foreground"
+                        className="min-w-0"
                         value={f.application}
                         onChange={(event) =>
                           setFiles((prev) =>
                             prev.map((file) =>
                               file.id === f.id
-                                ? { ...file, application: event.target.value }
+                                ? {
+                                    ...file,
+                                    application: event.target.value,
+                                    applicationManuallySet: true,
+                                  }
                                 : file,
                             ),
                           )
@@ -273,9 +360,9 @@ export default function Checker() {
                     </label>
                     <label className="flex min-w-0 flex-col gap-1">
                       Environment
-                      <input
+                      <Input
                         aria-label={`Environment for ${f.source}`}
-                        className="min-w-0 rounded-md border border-border bg-background px-2 py-1 text-foreground"
+                        className="min-w-0"
                         value={f.environment}
                         onChange={(event) =>
                           setFiles((prev) =>
@@ -294,7 +381,11 @@ export default function Checker() {
             </ul>
             <button
               type="button"
-              onClick={() => setFiles([])}
+              disabled={readingFiles}
+              onClick={() => {
+                setFiles([]);
+                setScanSummary(null);
+              }}
               className="shrink-0 cursor-pointer rounded-sm py-2 text-xs text-muted-foreground underline decoration-border underline-offset-4 transition-colors hover:text-foreground hover:decoration-current focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               Clear all
@@ -319,37 +410,22 @@ export default function Checker() {
           )}
           {findings.length > 0 && (
             <>
-              <div
-                className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-                role="group"
-                aria-label="Filter by status"
-              >
-                {FILTERS.map(({ status, label }) => (
-                  <button
-                    key={status}
-                    type="button"
-                    aria-pressed={statusFilter === status}
-                    aria-label={`${label}: ${count(status)}`}
-                    className={`rounded-lg text-left cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${statusFilter === status ? 'ring-2 ring-primary' : ''}`}
-                    onClick={() =>
-                      setStatusFilter((current) => (current === status ? null : status))
-                    }
-                  >
-                    <Stat label={label} value={count(status)} />
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <Button
-                  variant="secondary"
-                  aria-pressed={statusFilter === null}
-                  onClick={() => setStatusFilter(null)}
-                >
-                  All results ({findings.length})
-                </Button>
+              <div className="flex flex-col gap-3">
+                <ToggleGroup
+                  aria-label="Filter by status"
+                  className="flex w-fit max-w-full flex-wrap gap-2 [&>button]:flex-none"
+                  options={FILTERS.map(({ status, label }) => ({
+                    value: status,
+                    label: `${label} (${count(status)})`,
+                  }))}
+                  value={statusFilters}
+                  onChange={setStatusFilters}
+                />
                 <p className="text-sm text-muted-foreground">
                   Showing {visibleFindings.length} of {findings.length} results
-                  {statusFilter ? ` · ${LABEL[statusFilter]}` : ''}
+                  {statusFilters.length
+                    ? ` · ${statusFilters.map((status) => LABEL[status]).join(', ')}`
+                    : ''}
                 </p>
               </div>
               {discrepancies.length > 0 && (
@@ -422,7 +498,8 @@ export default function Checker() {
                       {visibleFindings.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={8}>
-                            No results for this status. Choose All results to reset the filter.
+                            No results for the selected statuses. Clear the selection to show all
+                            results.
                           </TableCell>
                         </TableRow>
                       )}

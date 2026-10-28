@@ -11,7 +11,7 @@ Cel: pomagać użytkownikowi zdecydować, co i kiedy zaktualizować. Obsługa fo
 3. Wykrywanie rozbieżności między plikami.
 4. CLI i GitHub Action.
 
-Skanowanie folderów, planowanie w czasie i eksport do kalendarza pozostają dodatkowymi kierunkami do zaplanowania.
+Planowanie w czasie i eksport do kalendarza pozostają dodatkowymi kierunkami do zaplanowania.
 
 ## 1. Czytelność wyników i wygoda obsługi
 
@@ -56,10 +56,10 @@ Większy etap pozwalający regularnie sprawdzać projekt bez ręcznego otwierani
 
 ### Skanowanie całego folderu projektu
 
-- [ ] Umożliwić wybór folderu i automatyczne odnajdywanie obsługiwanych plików.
-- [ ] Pomijać `.git`, `node_modules` i katalogi wynikowe.
-- [ ] Zachować lokalne przetwarzanie w przeglądarce.
-- [ ] W monorepo grupować wyniki według aplikacji i zachowywać ścieżki źródłowe.
+- [x] Umożliwić wybór folderu i automatyczne odnajdywanie obsługiwanych plików.
+- [x] Pomijać `.git`, `node_modules` i katalogi wynikowe.
+- [x] Zachować lokalne przetwarzanie w przeglądarce.
+- [x] W monorepo grupować wyniki według aplikacji i zachowywać ścieżki źródłowe.
 
 ### Planowanie aktualizacji w czasie
 

@@ -7,6 +7,8 @@ Parsing and matching run in the browser; nothing is uploaded.
 
 Use **Try example** to load a sample manifest. Click a status counter (including **Unknown**) to filter the report; click it again or choose **All results** to reset. Uploaded files can be removed individually. Recognised inputs without checked products show a warning rather than an empty report. **Copy all results as Markdown** exports the complete report, including source filenames, regardless of the active filter.
 
+Use **Choose project folder** to scan supported files in a project and its subdirectories. The scan skips `.git`, `node_modules` and common build-output directories, preserves relative source paths, and processes files locally without uploading their contents. It reads at most 200 files, 5 MiB per file and 20 MiB total, including files already added. The browser may still enumerate the selected folder before these filters and limits are applied, so very large folders can take time to select.
+
 ## How it works
 
 - `scripts/fetch-eol.ts` snapshots the products listed in `src/lib/mapping.ts` into `src/data/eol.json` at build time
@@ -26,6 +28,7 @@ Use **Try example** to load a sample manifest. Click a status counter (including
 - TypeScript is displayed by name with an explicit lifecycle-data explanation, including when its version is a range such as `^5`. Its unknown status reflects missing support dates, not a failure to parse the version.
 - npm ranges use the npm semver parser (`^`, `~`, `>=`, `>`, `<=`, `<`, wildcards, hyphen ranges and `||`). The reported version is the lowest allowed version, not an installed version. Upper-only, unbounded, invalid or impossible ranges remain unknown.
 - `src/components/Checker.tsx` is the UI: a React island built with [`@kjaniec-dev/ui`](https://ui.kjaniec.dev) and `@kjaniec-dev/design` (Tailwind v4 tokens, light/dark by OS setting), mounted from `src/pages/index.astro`. A scheduled workflow rebuilds the site daily to refresh the snapshot.
+- `src/lib/project-files.ts` filters folder entries, reads selected files sequentially within the browser-side limits and reports ignored, unsupported, oversized and unreadable files. Known filenames use the shared parser routing; JSON and YAML with other names are included only when parsing finds checked products.
 
 ## Develop
 

@@ -86,6 +86,10 @@ function namedType(filename: string): FileType | null {
   return null;
 }
 
+export function isSupportedFilename(filename: string): boolean {
+  return namedType(filename) !== null;
+}
+
 /** A filename disambiguates scalar pins; structured pasted manifests are content-detected. */
 export function detectFileType(text: string, filename?: string): FileType | null {
   const named = filename ? namedType(filename) : null;
