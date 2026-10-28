@@ -13,7 +13,12 @@ const IGNORED_DIRECTORIES = new Set([
   '.next',
   '.nuxt',
   '.output',
+  '.gradle',
+  '.turbo',
+  '.venv',
   'node_modules',
+  'vendor',
+  'venv',
   'build',
   'coverage',
   'dist',
@@ -84,8 +89,18 @@ export async function readProjectFiles(
   const projectDirectory = options.projectDirectory ?? false;
   const existingFileCount = options.existingFileCount ?? 0;
   const existingBytes = options.existingBytes ?? 0;
+  const orderedPicked = projectDirectory
+    ? picked
+        .map((file, index) => ({ file, index }))
+        .sort(
+          (left, right) =>
+            Number(!isSupportedFilename(sourcePath(left.file))) -
+              Number(!isSupportedFilename(sourcePath(right.file))) || left.index - right.index,
+        )
+        .map(({ file }) => file)
+    : picked;
 
-  for (const file of picked) {
+  for (const file of orderedPicked) {
     const source = sourcePath(file);
     if (projectDirectory && isInIgnoredDirectory(source)) {
       result.ignored++;

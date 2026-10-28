@@ -21,6 +21,7 @@ import { check, sortFindings } from '../lib/match.ts';
 import { formatMigrationSuggestions, MIGRATION_DISCLAIMER } from '../lib/migrations.ts';
 import { findingsToMarkdown } from '../lib/markdown.ts';
 import { parseAny } from '../lib/parsers/index.ts';
+import { applicationForPath } from '../lib/project-applications.ts';
 import { PROJECT_SCAN_LIMITS, readProjectFiles } from '../lib/project-files.ts';
 import type { ProjectScanResult } from '../lib/project-files.ts';
 import type { Dataset, Status } from '../lib/types.ts';
@@ -36,12 +37,6 @@ interface SelectedFile {
   size: number;
   application: string;
   environment: string;
-}
-
-function applicationForPath(path: string): string {
-  const normalized = path.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
-  const separator = normalized.lastIndexOf('/');
-  return separator > 0 ? normalized.slice(0, separator) : 'root';
 }
 
 const LABEL: Record<Status, string> = {
@@ -142,6 +137,10 @@ export default function Checker() {
         existingFileCount: files.length,
         existingBytes: files.reduce((total, file) => total + file.size, 0),
       });
+      const manifestPaths = [
+        ...files.map(({ source }) => source),
+        ...result.files.map(({ source }) => source),
+      ];
       setFiles((previous) => [
         ...previous,
         ...result.files.map(({ file, source, text, size }) => ({
@@ -150,7 +149,7 @@ export default function Checker() {
           source,
           text,
           size,
-          application: applicationForPath(source),
+          application: applicationForPath(source, manifestPaths),
           environment: 'default',
         })),
       ]);
@@ -251,7 +250,13 @@ export default function Checker() {
             {PROJECT_SCAN_LIMITS.maxFileBytes / 1024 / 1024} MiB each and{' '}
             {PROJECT_SCAN_LIMITS.maxTotalBytes / 1024 / 1024} MiB total.
           </p>
-          <Dropzone className="md:flex md:[&>button]:flex-1" onFiles={onFiles} multiple />
+          {readingFiles ? (
+            <p role="status" className="m-0 text-xs text-muted-foreground">
+              Scanning files… uploads are temporarily unavailable.
+            </p>
+          ) : (
+            <Dropzone className="md:flex md:[&>button]:flex-1" onFiles={onFiles} multiple />
+          )}
           {scanSummary && (
             <p role="status" className="m-0 text-xs text-muted-foreground">
               {scanSummary.projectDirectory ? 'Folder scan' : 'File upload'}: added{' '}
@@ -292,6 +297,7 @@ export default function Checker() {
                     </span>
                     <button
                       type="button"
+                      disabled={readingFiles}
                       aria-label={`Remove ${f.name}, file ${i + 1}`}
                       title={`Remove ${f.name}`}
                       className="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-background hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -352,6 +358,7 @@ export default function Checker() {
             </ul>
             <button
               type="button"
+              disabled={readingFiles}
               onClick={() => setFiles([])}
               className="shrink-0 cursor-pointer rounded-sm py-2 text-xs text-muted-foreground underline decoration-border underline-offset-4 transition-colors hover:text-foreground hover:decoration-current focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >

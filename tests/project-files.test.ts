@@ -122,6 +122,55 @@ describe('project folder scanning', () => {
     expect(result.failed).toBe(1);
   });
 
+  it('ignores Composer and Python/Gradle/Turbo dependency directories before reading', async () => {
+    const dependencies = [
+      file('app/vendor/acme/library/composer.json', '{"require":{"php":"^8.2"}}'),
+      file('app/.venv/lib/python/site-packages/project/pyproject.toml', '[project]'),
+      file('app/venv/lib/python/site-packages/project/requirements.txt', 'django==5.0'),
+      file('app/.gradle/caches/project/build.gradle', 'plugins {}'),
+      file('app/.turbo/cache/package.json', '{"engines":{"node":"22"}}'),
+    ];
+
+    const result = await readProjectFiles(dependencies, { projectDirectory: true });
+
+    expect(result.files).toEqual([]);
+    expect(result.ignored).toBe(dependencies.length);
+    for (const dependency of dependencies) expect(dependency.text).not.toHaveBeenCalled();
+  });
+
+  it('prioritizes recognized filenames over unrelated JSON within the file limit', async () => {
+    const settings = Array.from({ length: 200 }, (_, index) =>
+      file(`apps/web/settings-${index}.json`, '{"name":"settings"}'),
+    );
+    const manifest = file(
+      'apps/web/package.json',
+      '{"engines":{"node":"22"},"dependencies":{"react":"19.0.0"}}',
+    );
+
+    const result = await readProjectFiles([...settings, manifest], { projectDirectory: true });
+
+    expect(result.files.map(({ source }) => source)).toContain('apps/web/package.json');
+    expect(result.read).toBe(200);
+    expect(result.overLimit).toBe(1);
+    expect(manifest.text).toHaveBeenCalledOnce();
+  });
+
+  it('prioritizes recognized filenames before unrelated JSON consumes the byte budget', async () => {
+    const settings = Array.from({ length: 4 }, (_, index) =>
+      file(`apps/web/settings-${index}.json`, '{"name":"settings"}', 5 * 1024 * 1024),
+    );
+    const manifest = file(
+      'apps/web/package.json',
+      '{"engines":{"node":"22"},"dependencies":{"react":"19.0.0"}}',
+    );
+
+    const result = await readProjectFiles([...settings, manifest], { projectDirectory: true });
+
+    expect(result.files.map(({ source }) => source)).toContain('apps/web/package.json');
+    expect(result.bytesRead).toBeLessThanOrEqual(20 * 1024 * 1024);
+    expect(manifest.text).toHaveBeenCalledOnce();
+  });
+
   it('keeps manual file uploads unfiltered while still applying read limits', async () => {
     const textFile = file('notes.txt', 'plain text');
     const result = await readProjectFiles([textFile]);
