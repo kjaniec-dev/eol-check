@@ -32,7 +32,7 @@ export default function SupportPlanning({
   labels,
   variants,
 }: Props) {
-  const { dated, undated } = supportEndingBy(findings, date);
+  const { dated, unplaced } = supportEndingBy(findings, date);
   const todayDate = localIsoDate(today);
   const alreadyEnded = dated.filter((finding) => finding.eolFrom! <= todayDate).length;
 
@@ -59,7 +59,7 @@ export default function SupportPlanning({
           </Button>
         )}
       </div>
-      {date && dated.length === 0 && undated.length === 0 && (
+      {date && dated.length === 0 && unplaced.length === 0 && (
         <p className="text-sm text-muted-foreground">Nothing loses support on or before {date}.</p>
       )}
       {date && dated.length > 0 && (
@@ -104,17 +104,21 @@ export default function SupportPlanning({
           </Card>
         </>
       )}
-      {date && undated.length > 0 && (
+      {date && unplaced.length > 0 && (
         <div className="flex flex-col gap-1 text-sm">
-          <h3 className="m-0 font-semibold">Already past end of support, date unknown</h3>
+          <h3 className="m-0 font-semibold">Past end of support, not placed by date</h3>
           <p className="m-0 text-muted-foreground">
-            No end date is listed for these, so they cannot be placed relative to {date}:
+            These are already marked as unsupported, but their listed end date is missing or later
+            than the status implies, so {date} cannot place them:
           </p>
-          <ul className="m-0 list-disc pl-5" aria-label="End date unknown">
-            {undated.map((finding, index) => (
+          <ul className="m-0 list-disc pl-5" aria-label="Not placed by date">
+            {unplaced.map((finding, index) => (
               <li key={index}>
                 {finding.productLabel ?? finding.component.label} {finding.component.version ?? ''}{' '}
-                <span className="text-muted-foreground">({finding.component.source})</span>
+                <span className="text-muted-foreground">
+                  ({finding.component.source}
+                  {finding.eolFrom ? `; listed end ${finding.eolFrom}` : '; no end date listed'})
+                </span>
               </li>
             ))}
           </ul>

@@ -113,29 +113,44 @@ describe('planning by date', () => {
     expect(cycles('2025-04-30')).toEqual(['18']);
   });
 
-  it('keeps EOL findings without an end date apart from dated results', () => {
-    const undated = check(
-      [node('unknown-date'), node('18')],
+  it('keeps EOL findings that a date cannot place apart from dated results', () => {
+    const flagged = check(
+      [node('no-date'), node('future-date'), node('18')],
       {
         ...data,
         products: {
           nodejs: {
             label: 'Node.js',
-            releases: [...data.products.nodejs!.releases, rel('unknown-date', null, true)],
+            releases: [
+              ...data.products.nodejs!.releases,
+              rel('no-date', null, true),
+              rel('future-date', '2030-01-01', true), // flagged EOL, but upstream lists a later date
+            ],
           },
         },
       },
       today,
     );
-    const plan = supportEndingBy(undated, '2024-01-01');
-    expect(plan.dated).toEqual([]);
-    expect(plan.undated.map(({ cycle }) => cycle)).toEqual(['unknown-date']);
-    expect(supportEndingBy(undated, '2026-01-01').dated.map(({ cycle }) => cycle)).toEqual(['18']);
+
+    // 2024: Node 18 was still supported, but both flagged releases are already unsupported now.
+    const early = supportEndingBy(flagged, '2024-01-01');
+    expect(early.dated).toEqual([]);
+    expect(early.unplaced.map(({ cycle }) => cycle)).toEqual(['no-date', 'future-date']);
+
+    // Once the date passes the listed one, the dated release moves into the dated list.
+    const late = supportEndingBy(flagged, '2030-06-01');
+    expect(late.dated.map(({ cycle }) => cycle)).toEqual(['18', 'future-date']);
+    expect(late.unplaced.map(({ cycle }) => cycle)).toEqual(['no-date']);
+
+    // A past end date is never "unplaced": it was supported on earlier dates.
+    expect(supportEndingBy(flagged, '2025-01-01').unplaced.map(({ cycle }) => cycle)).not.toContain(
+      '18',
+    );
   });
 
   it('ignores an empty or invalid date', () => {
-    expect(supportEndingBy(findings, '')).toEqual({ dated: [], undated: [] });
-    expect(supportEndingBy(findings, '2026-13-01')).toEqual({ dated: [], undated: [] });
+    expect(supportEndingBy(findings, '')).toEqual({ dated: [], unplaced: [] });
+    expect(supportEndingBy(findings, '2026-13-01')).toEqual({ dated: [], unplaced: [] });
   });
 
   it('finds the last day of the current quarter', () => {

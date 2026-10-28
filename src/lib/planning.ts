@@ -11,17 +11,24 @@ export function endOfQuarter(today: Date): string {
 export interface SupportPlan {
   /** Findings whose listed end-of-support date is on or before the chosen date, earliest first. */
   dated: Finding[];
-  /** Findings already past end of support whose end date is unknown, so no date can be compared. */
-  undated: Finding[];
+  /**
+   * Findings already marked past end of support that a date cannot place: no end date is listed,
+   * or upstream lists a later date than the flag implies. Hiding them would understate the risk.
+   */
+  unplaced: Finding[];
 }
 
 export function supportEndingBy(findings: Finding[], date: string): SupportPlan {
-  if (isoDate(date) === null) return { dated: [], undated: [] };
+  if (isoDate(date) === null) return { dated: [], unplaced: [] };
+  const endsByDate = (finding: Finding) => finding.eolFrom !== null && finding.eolFrom <= date;
   return {
-    dated: findings
-      .filter((finding) => finding.eolFrom !== null && finding.eolFrom <= date)
-      .sort((a, b) => a.eolFrom!.localeCompare(b.eolFrom!)),
-    undated: findings.filter((finding) => finding.status === 'eol' && finding.eolFrom === null),
+    dated: findings.filter(endsByDate).sort((a, b) => a.eolFrom!.localeCompare(b.eolFrom!)),
+    // `daysRemaining` is null for an EOL finding only when its listed date is missing or still
+    // ahead; an EOL finding with a past date was supported on any earlier date and stays out.
+    unplaced: findings.filter(
+      (finding) =>
+        finding.status === 'eol' && finding.daysRemaining === null && !endsByDate(finding),
+    ),
   };
 }
 
