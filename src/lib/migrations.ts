@@ -1,4 +1,4 @@
-import { daysUntil, SOON_DAYS, statusOf } from './status.ts';
+import { daysUntil, localIsoDate, SOON_DAYS, statusOf } from './status.ts';
 import type { MigrationSuggestion, Release } from './types.ts';
 
 export const MIGRATION_DISCLAIMER =
@@ -27,7 +27,7 @@ export function suggestMigrations(
   const current = numericCycle(currentCycle);
   if (!current) return [];
 
-  const todayDate = today.toISOString().slice(0, 10);
+  const todayDate = localIsoDate(today);
   const candidates = releases.flatMap((release) => {
     const candidate = numericCycle(release.name);
     if (!candidate || compareCycles(candidate, current) <= 0) return [];

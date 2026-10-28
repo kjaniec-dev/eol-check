@@ -31,6 +31,7 @@ import { SOON_DAYS, SOON_DAYS_OPTIONS } from '../lib/status.ts';
 import type { Dataset, Status } from '../lib/types.ts';
 import { versionBasisInfo } from '../lib/version-basis.ts';
 import SupportPlanning from './SupportPlanning.tsx';
+import { useToday } from './useToday.ts';
 
 const dataset = data as Dataset;
 
@@ -85,8 +86,8 @@ export default function Checker() {
   const nextFileId = useRef(0);
   const readingFilesRef = useRef(false);
 
-  const { findings, discrepancies, unrecognised, emptySources, today } = useMemo(() => {
-    const today = new Date();
+  const today = useToday();
+  const { findings, discrepancies, unrecognised, emptySources } = useMemo(() => {
     const parsed = [
       ...files.map((f) => {
         const result = parseAny(f.text, f.source);
@@ -123,13 +124,12 @@ export default function Checker() {
     ];
     const components = parsed.flatMap((p) => p.components);
     return {
-      today,
       findings: sortFindings(check(components, dataset, today, soonDays)),
       discrepancies: findDiscrepancies(components),
       unrecognised: parsed.filter((p) => !p.type).length,
       emptySources: parsed.filter((p) => p.type && p.components.length === 0).map((p) => p.source),
     };
-  }, [pasted, pastedType, pastedApplication, pastedEnvironment, files, soonDays]);
+  }, [pasted, pastedType, pastedApplication, pastedEnvironment, files, soonDays, today]);
 
   const count = (s: Status) => findings.filter((f) => f.status === s).length;
   const filters: { status: Status; label: string }[] = [

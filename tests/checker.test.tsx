@@ -332,6 +332,17 @@ describe('Checker file scanning controls', () => {
     expect(planning.querySelectorAll('tbody tr').length).toBeGreaterThan(0);
     expect(planning.textContent).toContain('Node.js');
 
+    // A date before Node.js 18 reached end of life must not list it.
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+        date,
+        '2000-01-01',
+      );
+      date.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(planning.textContent).toContain('Nothing loses support on or before 2000-01-01.');
+    expect(planning.querySelector('table')).toBeNull();
+
     await act(async () => buttonWithText('Clear date')?.click());
     expect(container.querySelector('[aria-label="Support planning"] table')).toBeNull();
   });

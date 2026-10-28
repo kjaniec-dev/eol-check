@@ -1,11 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { check } from '../src/lib/match.ts';
 import { suggestMigrations } from '../src/lib/migrations.ts';
 import { endOfQuarter, formatDaysRemaining, supportEndingBy } from '../src/lib/planning.ts';
-import { daysUntil, statusOf } from '../src/lib/status.ts';
+import { daysUntil, localIsoDate, statusOf } from '../src/lib/status.ts';
 import type { Component, Dataset, Release } from '../src/lib/types.ts';
 
-const today = new Date('2026-02-01T00:00:00Z');
+const today = new Date(2026, 1, 1);
 const rel = (name: string, eolFrom: string | null, isEol = false): Release => ({
   name,
   isEol,
@@ -60,7 +60,7 @@ describe('days remaining', () => {
     expect(daysUntil('2026-02-11', today)).toBe(10);
     expect(daysUntil('2026-02-01', today)).toBe(0);
     expect(daysUntil('2026-01-30', today)).toBe(-2);
-    expect(daysUntil('2026-02-01', new Date('2026-02-01T10:00:00Z'))).toBe(0);
+    expect(daysUntil('2026-02-01', new Date(2026, 1, 1, 10))).toBe(0);
     expect(daysUntil(null, today)).toBeNull();
     expect(daysUntil('2026-02-31', today)).toBeNull();
   });
@@ -100,26 +100,74 @@ describe('days remaining', () => {
 
 describe('planning by date', () => {
   const findings = check([node('24'), node('22'), node('20'), node('18')], data, today);
+  const cycles = (date: string) => supportEndingBy(findings, date).dated.map(({ cycle }) => cycle);
 
-  it('lists ended and soon-ending findings up to the date, earliest first', () => {
-    expect(supportEndingBy(findings, '2026-12-31').map(({ cycle }) => cycle)).toEqual([
-      '18',
-      '20',
-      '22',
-    ]);
-    expect(supportEndingBy(findings, '2026-04-30').map(({ cycle }) => cycle)).toEqual(['18', '20']);
-    expect(supportEndingBy(findings, '2026-04-29').map(({ cycle }) => cycle)).toEqual(['18']);
+  it('lists findings whose end date is on or before the date, earliest first', () => {
+    expect(cycles('2026-12-31')).toEqual(['18', '20', '22']);
+    expect(cycles('2026-04-30')).toEqual(['18', '20']);
+    expect(cycles('2026-04-29')).toEqual(['18']);
+  });
+
+  it('does not list findings that were still supported on a past date', () => {
+    expect(cycles('2025-04-29')).toEqual([]);
+    expect(cycles('2025-04-30')).toEqual(['18']);
+  });
+
+  it('keeps EOL findings without an end date apart from dated results', () => {
+    const undated = check(
+      [node('unknown-date'), node('18')],
+      {
+        ...data,
+        products: {
+          nodejs: {
+            label: 'Node.js',
+            releases: [...data.products.nodejs!.releases, rel('unknown-date', null, true)],
+          },
+        },
+      },
+      today,
+    );
+    const plan = supportEndingBy(undated, '2024-01-01');
+    expect(plan.dated).toEqual([]);
+    expect(plan.undated.map(({ cycle }) => cycle)).toEqual(['unknown-date']);
+    expect(supportEndingBy(undated, '2026-01-01').dated.map(({ cycle }) => cycle)).toEqual(['18']);
   });
 
   it('ignores an empty or invalid date', () => {
-    expect(supportEndingBy(findings, '')).toEqual([]);
-    expect(supportEndingBy(findings, '2026-13-01')).toEqual([]);
+    expect(supportEndingBy(findings, '')).toEqual({ dated: [], undated: [] });
+    expect(supportEndingBy(findings, '2026-13-01')).toEqual({ dated: [], undated: [] });
   });
 
   it('finds the last day of the current quarter', () => {
-    expect(endOfQuarter(new Date('2026-01-01T00:00:00Z'))).toBe('2026-03-31');
-    expect(endOfQuarter(new Date('2026-05-15T12:00:00Z'))).toBe('2026-06-30');
-    expect(endOfQuarter(new Date('2026-10-28T00:00:00Z'))).toBe('2026-12-31');
-    expect(endOfQuarter(new Date('2026-12-31T23:59:59Z'))).toBe('2026-12-31');
+    expect(endOfQuarter(new Date(2026, 0, 1))).toBe('2026-03-31');
+    expect(endOfQuarter(new Date(2026, 4, 15, 12))).toBe('2026-06-30');
+    expect(endOfQuarter(new Date(2026, 9, 28))).toBe('2026-12-31');
+    expect(endOfQuarter(new Date(2026, 11, 31, 23, 59, 59))).toBe('2026-12-31');
   });
 });
+
+describe.each(['Europe/Warsaw', 'America/Los_Angeles', 'Pacific/Auckland', 'UTC'])(
+  'calendar dates in %s',
+  (zone) => {
+    const originalZone = process.env.TZ;
+    afterEach(() => {
+      if (originalZone === undefined) delete process.env.TZ;
+      else process.env.TZ = originalZone;
+    });
+
+    it('uses the local date for quarters, days left and status around midnight', () => {
+      process.env.TZ = zone;
+      const justAfterMidnight = new Date(2026, 3, 1, 0, 30); // 1 April, local
+      const lateEvening = new Date(2026, 2, 31, 23, 30); // 31 March, local
+
+      expect(localIsoDate(justAfterMidnight)).toBe('2026-04-01');
+      expect(endOfQuarter(justAfterMidnight)).toBe('2026-06-30');
+      expect(endOfQuarter(lateEvening)).toBe('2026-03-31');
+      expect(daysUntil('2026-04-01', justAfterMidnight)).toBe(0);
+      expect(daysUntil('2026-04-01', lateEvening)).toBe(1);
+      expect(daysUntil('2026-04-30', justAfterMidnight)).toBe(29);
+      expect(statusOf(rel('x', '2026-04-01'), justAfterMidnight)).toBe('eol');
+      expect(statusOf(rel('x', '2026-04-01'), lateEvening)).toBe('soon');
+    });
+  },
+);
